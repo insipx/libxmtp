@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use xmtp_configuration::MAX_PAGE_SIZE;
 use xmtp_proto::{
     api::{ApiClientError, Client, Query},
@@ -44,5 +46,11 @@ where
         // sort the envelopes by their originator timestamp
         sort::timestamp(&mut envelopes).sort()?;
         Ok(XmtpEnvelope::new(envelopes))
+    }
+
+    async fn get_node_clients(
+        &self,
+    ) -> Result<HashMap<u32, xmtp_api_grpc::GrpcClient>, Self::Error> {
+        crate::queries::build_node_clients(&self.xmtpd_grpc, None).await
     }
 }
