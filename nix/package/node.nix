@@ -80,8 +80,11 @@ rust.napiBuild (
     '';
   }
   // lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+    # sigtool provides `codesign` on PATH for the postFixup re-sign.
+    # See https://github.com/xmtp/libxmtp/issues/3513.
     nativeBuildInputs = commonArgs.nativeBuildInputs ++ [
       darwin.autoSignDarwinBinariesHook
+      darwin.sigtool
     ];
     postFixup = ''
       NODE_LIB=$(echo $out/dist/bindings_node.*.node)
