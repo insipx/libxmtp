@@ -17888,6 +17888,7 @@ dependencies = [
  "http 1.4.0",
  "mockall",
  "openmls",
+ "openmls_traits",
  "pbjson",
  "pbjson-build",
  "pbjson-types",
