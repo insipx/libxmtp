@@ -186,471 +186,147 @@ impl WelcomeWrapperAlgorithm {
         }
     }
 }
-/// Message for group mutable metadata
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GroupMutableMetadataV1 {
-    /// Map to store various metadata attributes (Group name, etc.)
-    #[prost(map = "string, string", tag = "1")]
-    pub attributes: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
-    #[prost(message, optional, tag = "2")]
-    pub admin_list: ::core::option::Option<Inboxes>,
-    /// Creator starts as only super_admin
-    /// Only super_admin can add/remove other super_admin
-    #[prost(message, optional, tag = "3")]
-    pub super_admin_list: ::core::option::Option<Inboxes>,
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OneshotMessage {
+    #[prost(oneof = "oneshot_message::MessageType", tags = "1")]
+    pub message_type: ::core::option::Option<oneshot_message::MessageType>,
 }
-impl ::prost::Name for GroupMutableMetadataV1 {
-    const NAME: &'static str = "GroupMutableMetadataV1";
+/// Nested message and enum types in `OneshotMessage`.
+pub mod oneshot_message {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum MessageType {
+        #[prost(message, tag = "1")]
+        ReaddRequest(super::ReaddRequest),
+    }
+}
+impl ::prost::Name for OneshotMessage {
+    const NAME: &'static str = "OneshotMessage";
     const PACKAGE: &'static str = "xmtp.mls.message_contents";
     fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.GroupMutableMetadataV1".into()
+        "xmtp.mls.message_contents.OneshotMessage".into()
     }
     fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.GroupMutableMetadataV1".into()
+        "/xmtp.mls.message_contents.OneshotMessage".into()
     }
 }
-/// Wrapper around a list of repeated Inbox Ids
+/// A request sent by an installation to recover from a fork. Other members
+/// may remove and readd that installation from the group.
+/// XIP: <https://community.xmtp.org/t/xip-68-draft-automated-fork-recovery/951>
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct Inboxes {
-    #[prost(string, repeated, tag = "1")]
-    pub inbox_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-impl ::prost::Name for Inboxes {
-    const NAME: &'static str = "Inboxes";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.Inboxes".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.Inboxes".into()
-    }
-}
-/// PlaintextCommitLogEntry indicates whether a commit was successful or not,
-/// when applied on top of the indicated `last_epoch_authenticator`.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct PlaintextCommitLogEntry {
-    /// The group_id of the group that the commit belongs to.
+pub struct ReaddRequest {
     #[prost(bytes = "vec", tag = "1")]
     pub group_id: ::prost::alloc::vec::Vec<u8>,
-    /// The sequence ID of the commit payload being validated.
+    /// The sequence ID of the latest commit log entry at the time the request
+    /// is sent; used to disambiguate cases where an installation forks
+    /// and is readded multiple times.
     #[prost(uint64, tag = "2")]
-    pub commit_sequence_id: u64,
-    /// The encryption state before the commit was applied.
-    #[prost(bytes = "vec", tag = "3")]
-    pub last_epoch_authenticator: ::prost::alloc::vec::Vec<u8>,
-    /// Indicates whether the commit was successful, or why it failed.
-    #[prost(enumeration = "CommitResult", tag = "4")]
-    pub commit_result: i32,
-    /// The epoch number after the commit was applied, if successful.
-    #[prost(uint64, tag = "5")]
-    pub applied_epoch_number: u64,
-    /// The encryption state after the commit was applied, if successful.
-    #[prost(bytes = "vec", tag = "6")]
-    pub applied_epoch_authenticator: ::prost::alloc::vec::Vec<u8>,
+    pub latest_commit_sequence_id: u64,
 }
-impl ::prost::Name for PlaintextCommitLogEntry {
-    const NAME: &'static str = "PlaintextCommitLogEntry";
+impl ::prost::Name for ReaddRequest {
+    const NAME: &'static str = "ReaddRequest";
     const PACKAGE: &'static str = "xmtp.mls.message_contents";
     fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.PlaintextCommitLogEntry".into()
+        "xmtp.mls.message_contents.ReaddRequest".into()
     }
     fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.PlaintextCommitLogEntry".into()
+        "/xmtp.mls.message_contents.ReaddRequest".into()
     }
 }
+/// Parent message for group metadata
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct CommitLogEntry {
-    #[prost(uint64, tag = "1")]
-    pub sequence_id: u64,
-    #[prost(bytes = "vec", tag = "2")]
-    pub serialized_commit_log_entry: ::prost::alloc::vec::Vec<u8>,
-    #[prost(message, optional, tag = "3")]
-    pub signature: ::core::option::Option<
-        super::super::identity::associations::RecoverableEd25519Signature,
-    >,
-}
-impl ::prost::Name for CommitLogEntry {
-    const NAME: &'static str = "CommitLogEntry";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.CommitLogEntry".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.CommitLogEntry".into()
-    }
-}
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum CommitResult {
-    Unspecified = 0,
-    Applied = 1,
-    WrongEpoch = 2,
-    Undecryptable = 3,
-    Invalid = 4,
-}
-impl CommitResult {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            Self::Unspecified => "COMMIT_RESULT_UNSPECIFIED",
-            Self::Applied => "COMMIT_RESULT_APPLIED",
-            Self::WrongEpoch => "COMMIT_RESULT_WRONG_EPOCH",
-            Self::Undecryptable => "COMMIT_RESULT_UNDECRYPTABLE",
-            Self::Invalid => "COMMIT_RESULT_INVALID",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "COMMIT_RESULT_UNSPECIFIED" => Some(Self::Unspecified),
-            "COMMIT_RESULT_APPLIED" => Some(Self::Applied),
-            "COMMIT_RESULT_WRONG_EPOCH" => Some(Self::WrongEpoch),
-            "COMMIT_RESULT_UNDECRYPTABLE" => Some(Self::Undecryptable),
-            "COMMIT_RESULT_INVALID" => Some(Self::Invalid),
-            _ => None,
-        }
-    }
-}
-/// Extension data for proposal support in group context.
-/// When present in the group context extensions, indicates the group
-/// uses proposal-by-reference flow.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ProposalSupport {
-    #[prost(uint32, tag = "1")]
-    pub version: u32,
-}
-impl ::prost::Name for ProposalSupport {
-    const NAME: &'static str = "ProposalSupport";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.ProposalSupport".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.ProposalSupport".into()
-    }
-}
-/// ContentTypeId is used to identify the type of content stored in a Message.
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ContentTypeId {
-    /// authority governing this content type
-    #[prost(string, tag = "1")]
-    pub authority_id: ::prost::alloc::string::String,
-    /// type identifier
+pub struct GroupMetadataV1 {
+    #[prost(enumeration = "ConversationType", tag = "1")]
+    pub conversation_type: i32,
+    /// This will be removed soon
     #[prost(string, tag = "2")]
-    pub type_id: ::prost::alloc::string::String,
-    /// major version of the type
-    #[prost(uint32, tag = "3")]
-    pub version_major: u32,
-    /// minor version of the type
-    #[prost(uint32, tag = "4")]
-    pub version_minor: u32,
-}
-impl ::prost::Name for ContentTypeId {
-    const NAME: &'static str = "ContentTypeId";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.ContentTypeId".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.ContentTypeId".into()
-    }
-}
-/// EncodedContent bundles the content with metadata identifying its type
-/// and parameters required for correct decoding and presentation of the content.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct EncodedContent {
-    /// content type identifier used to match the payload with
-    /// the correct decoding machinery
-    #[prost(message, optional, tag = "1")]
-    pub r#type: ::core::option::Option<ContentTypeId>,
-    /// optional encoding parameters required to correctly decode the content
-    #[prost(map = "string, string", tag = "2")]
-    pub parameters: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
-    /// optional fallback description of the content that can be used in case
-    /// the client cannot decode or render the content
-    #[prost(string, optional, tag = "3")]
-    pub fallback: ::core::option::Option<::prost::alloc::string::String>,
-    /// optional compression; the value indicates algorithm used to
-    /// compress the encoded content bytes
-    #[prost(enumeration = "Compression", optional, tag = "5")]
-    pub compression: ::core::option::Option<i32>,
-    /// encoded content itself
-    #[prost(bytes = "vec", tag = "4")]
-    pub content: ::prost::alloc::vec::Vec<u8>,
-}
-impl ::prost::Name for EncodedContent {
-    const NAME: &'static str = "EncodedContent";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.EncodedContent".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.EncodedContent".into()
-    }
-}
-/// A PlaintextEnvelope is the outermost payload that gets encrypted by MLS
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct PlaintextEnvelope {
-    /// Selector which declares which version of the EncodedContent this
-    /// PlaintextEnvelope is
-    #[prost(oneof = "plaintext_envelope::Content", tags = "1, 2")]
-    pub content: ::core::option::Option<plaintext_envelope::Content>,
-}
-/// Nested message and enum types in `PlaintextEnvelope`.
-pub mod plaintext_envelope {
-    /// Version 1 of the encrypted envelope
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-    pub struct V1 {
-        /// Expected to be EncodedContent
-        #[prost(bytes = "vec", tag = "1")]
-        pub content: ::prost::alloc::vec::Vec<u8>,
-        /// A unique value that can be used to ensure that the same content can
-        /// produce different hashes. May be the sender timestamp.
-        #[prost(string, tag = "2")]
-        pub idempotency_key: ::prost::alloc::string::String,
-    }
-    impl ::prost::Name for V1 {
-        const NAME: &'static str = "V1";
-        const PACKAGE: &'static str = "xmtp.mls.message_contents";
-        fn full_name() -> ::prost::alloc::string::String {
-            "xmtp.mls.message_contents.PlaintextEnvelope.V1".into()
-        }
-        fn type_url() -> ::prost::alloc::string::String {
-            "/xmtp.mls.message_contents.PlaintextEnvelope.V1".into()
-        }
-    }
-    /// Version 2 of the encrypted envelope
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-    pub struct V2 {
-        /// A unique value that can be used to ensure that the same content can
-        /// produce different hashes. May be the sender timestamp.
-        #[prost(string, tag = "1")]
-        pub idempotency_key: ::prost::alloc::string::String,
-        #[prost(oneof = "v2::MessageType", tags = "2, 3, 4, 5")]
-        pub message_type: ::core::option::Option<v2::MessageType>,
-    }
-    /// Nested message and enum types in `V2`.
-    pub mod v2 {
-        #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
-        pub enum MessageType {
-            /// Expected to be EncodedContent
-            #[prost(bytes, tag = "2")]
-            Content(::prost::alloc::vec::Vec<u8>),
-            /// Initiator sends a request to receive sync payload
-            #[prost(message, tag = "3")]
-            DeviceSyncRequest(
-                super::super::super::super::device_sync::content::DeviceSyncRequest,
-            ),
-            /// Some other authorized installation sends a reply with a link to payload
-            #[prost(message, tag = "4")]
-            DeviceSyncReply(
-                super::super::super::super::device_sync::content::DeviceSyncReply,
-            ),
-            /// A serialized user preference update
-            #[prost(message, tag = "5")]
-            UserPreferenceUpdate(
-                super::super::super::super::device_sync::content::V1UserPreferenceUpdate,
-            ),
-        }
-    }
-    impl ::prost::Name for V2 {
-        const NAME: &'static str = "V2";
-        const PACKAGE: &'static str = "xmtp.mls.message_contents";
-        fn full_name() -> ::prost::alloc::string::String {
-            "xmtp.mls.message_contents.PlaintextEnvelope.V2".into()
-        }
-        fn type_url() -> ::prost::alloc::string::String {
-            "/xmtp.mls.message_contents.PlaintextEnvelope.V2".into()
-        }
-    }
-    /// Selector which declares which version of the EncodedContent this
-    /// PlaintextEnvelope is
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
-    pub enum Content {
-        #[prost(message, tag = "1")]
-        V1(V1),
-        #[prost(message, tag = "2")]
-        V2(V2),
-    }
-}
-impl ::prost::Name for PlaintextEnvelope {
-    const NAME: &'static str = "PlaintextEnvelope";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.PlaintextEnvelope".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.PlaintextEnvelope".into()
-    }
-}
-/// Recognized compression algorithms
-/// protolint:disable ENUM_FIELD_NAMES_ZERO_VALUE_END_WITH
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum Compression {
-    Deflate = 0,
-    Gzip = 1,
-}
-impl Compression {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            Self::Deflate => "COMPRESSION_DEFLATE",
-            Self::Gzip => "COMPRESSION_GZIP",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "COMPRESSION_DEFLATE" => Some(Self::Deflate),
-            "COMPRESSION_GZIP" => Some(Self::Gzip),
-            _ => None,
-        }
-    }
-}
-/// A group member and affected installation IDs
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct MembershipChange {
-    #[prost(bytes = "vec", repeated, tag = "1")]
-    pub installation_ids: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
-    #[prost(string, tag = "2")]
-    pub account_address: ::prost::alloc::string::String,
+    pub creator_account_address: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
-    pub initiated_by_account_address: ::prost::alloc::string::String,
+    pub creator_inbox_id: ::prost::alloc::string::String,
+    /// Should only be present for CONVERSATION_TYPE_DM
+    #[prost(message, optional, tag = "4")]
+    pub dm_members: ::core::option::Option<DmMembers>,
+    /// Should only be present for CONVERSATION_TYPE_ONESHOT
+    #[prost(message, optional, tag = "5")]
+    pub oneshot_message: ::core::option::Option<OneshotMessage>,
 }
-impl ::prost::Name for MembershipChange {
-    const NAME: &'static str = "MembershipChange";
+impl ::prost::Name for GroupMetadataV1 {
+    const NAME: &'static str = "GroupMetadataV1";
     const PACKAGE: &'static str = "xmtp.mls.message_contents";
     fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.MembershipChange".into()
+        "xmtp.mls.message_contents.GroupMetadataV1".into()
     }
     fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.MembershipChange".into()
+        "/xmtp.mls.message_contents.GroupMetadataV1".into()
     }
 }
-/// The group membership change proto
-///
-/// protolint:disable REPEATED_FIELD_NAMES_PLURALIZED
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GroupMembershipChanges {
-    /// Members that have been added in the commit
-    #[prost(message, repeated, tag = "1")]
-    pub members_added: ::prost::alloc::vec::Vec<MembershipChange>,
-    /// Members that have been removed in the commit
-    #[prost(message, repeated, tag = "2")]
-    pub members_removed: ::prost::alloc::vec::Vec<MembershipChange>,
-    /// Installations that have been added in the commit, grouped by member
-    #[prost(message, repeated, tag = "3")]
-    pub installations_added: ::prost::alloc::vec::Vec<MembershipChange>,
-    /// Installations removed in the commit, grouped by member
-    #[prost(message, repeated, tag = "4")]
-    pub installations_removed: ::prost::alloc::vec::Vec<MembershipChange>,
-}
-impl ::prost::Name for GroupMembershipChanges {
-    const NAME: &'static str = "GroupMembershipChanges";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.GroupMembershipChanges".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.GroupMembershipChanges".into()
-    }
-}
-/// A summary of the changes in a commit.
-/// Includes added/removed inboxes and changes to metadata
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct GroupUpdated {
+/// Wrapper around an Inbox Id
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Inbox {
     #[prost(string, tag = "1")]
-    pub initiated_by_inbox_id: ::prost::alloc::string::String,
-    /// The inboxes added in the commit
-    #[prost(message, repeated, tag = "2")]
-    pub added_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
-    /// The inboxes removed in the commit
-    #[prost(message, repeated, tag = "3")]
-    pub removed_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
-    /// The metadata changes in the commit
-    #[prost(message, repeated, tag = "4")]
-    pub metadata_field_changes: ::prost::alloc::vec::Vec<
-        group_updated::MetadataFieldChange,
-    >,
-    /// / The inboxes that were removed from the group in response to pending-remove/self-remove requests
-    #[prost(message, repeated, tag = "5")]
-    pub left_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
-    /// The inboxes that were added to admin list in the commit
-    #[prost(message, repeated, tag = "6")]
-    pub added_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
-    /// The inboxes that were removed from admin list in the commit
-    #[prost(message, repeated, tag = "7")]
-    pub removed_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
-    /// The inboxes that were added to super admin list in the commit
-    #[prost(message, repeated, tag = "8")]
-    pub added_super_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
-    /// The inboxes that were removed from super admin list in the commit
-    #[prost(message, repeated, tag = "9")]
-    pub removed_super_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    pub inbox_id: ::prost::alloc::string::String,
 }
-/// Nested message and enum types in `GroupUpdated`.
-pub mod group_updated {
-    /// An inbox that was added or removed in this commit
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-    pub struct Inbox {
-        #[prost(string, tag = "1")]
-        pub inbox_id: ::prost::alloc::string::String,
-    }
-    impl ::prost::Name for Inbox {
-        const NAME: &'static str = "Inbox";
-        const PACKAGE: &'static str = "xmtp.mls.message_contents";
-        fn full_name() -> ::prost::alloc::string::String {
-            "xmtp.mls.message_contents.GroupUpdated.Inbox".into()
-        }
-        fn type_url() -> ::prost::alloc::string::String {
-            "/xmtp.mls.message_contents.GroupUpdated.Inbox".into()
-        }
-    }
-    /// A summary of a change to the mutable metadata
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-    pub struct MetadataFieldChange {
-        /// The field that was changed
-        #[prost(string, tag = "1")]
-        pub field_name: ::prost::alloc::string::String,
-        /// The previous value
-        #[prost(string, optional, tag = "2")]
-        pub old_value: ::core::option::Option<::prost::alloc::string::String>,
-        /// The updated value
-        #[prost(string, optional, tag = "3")]
-        pub new_value: ::core::option::Option<::prost::alloc::string::String>,
-    }
-    impl ::prost::Name for MetadataFieldChange {
-        const NAME: &'static str = "MetadataFieldChange";
-        const PACKAGE: &'static str = "xmtp.mls.message_contents";
-        fn full_name() -> ::prost::alloc::string::String {
-            "xmtp.mls.message_contents.GroupUpdated.MetadataFieldChange".into()
-        }
-        fn type_url() -> ::prost::alloc::string::String {
-            "/xmtp.mls.message_contents.GroupUpdated.MetadataFieldChange".into()
-        }
-    }
-}
-impl ::prost::Name for GroupUpdated {
-    const NAME: &'static str = "GroupUpdated";
+impl ::prost::Name for Inbox {
+    const NAME: &'static str = "Inbox";
     const PACKAGE: &'static str = "xmtp.mls.message_contents";
     fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.GroupUpdated".into()
+        "xmtp.mls.message_contents.Inbox".into()
     }
     fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.GroupUpdated".into()
+        "/xmtp.mls.message_contents.Inbox".into()
+    }
+}
+/// Ordering does not matter here
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DmMembers {
+    #[prost(message, optional, tag = "1")]
+    pub dm_member_one: ::core::option::Option<Inbox>,
+    #[prost(message, optional, tag = "2")]
+    pub dm_member_two: ::core::option::Option<Inbox>,
+}
+impl ::prost::Name for DmMembers {
+    const NAME: &'static str = "DmMembers";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.DmMembers".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.DmMembers".into()
+    }
+}
+/// Defines the type of conversation
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ConversationType {
+    Unspecified = 0,
+    Group = 1,
+    Dm = 2,
+    Sync = 3,
+    Oneshot = 4,
+}
+impl ConversationType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "CONVERSATION_TYPE_UNSPECIFIED",
+            Self::Group => "CONVERSATION_TYPE_GROUP",
+            Self::Dm => "CONVERSATION_TYPE_DM",
+            Self::Sync => "CONVERSATION_TYPE_SYNC",
+            Self::Oneshot => "CONVERSATION_TYPE_ONESHOT",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CONVERSATION_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "CONVERSATION_TYPE_GROUP" => Some(Self::Group),
+            "CONVERSATION_TYPE_DM" => Some(Self::Dm),
+            "CONVERSATION_TYPE_SYNC" => Some(Self::Sync),
+            "CONVERSATION_TYPE_ONESHOT" => Some(Self::Oneshot),
+            _ => None,
+        }
     }
 }
 /// Message for group mutable metadata
@@ -1021,147 +697,22 @@ impl ::prost::Name for PermissionsUpdatePolicy {
         "/xmtp.mls.message_contents.PermissionsUpdatePolicy".into()
     }
 }
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct OneshotMessage {
-    #[prost(oneof = "oneshot_message::MessageType", tags = "1")]
-    pub message_type: ::core::option::Option<oneshot_message::MessageType>,
+/// Extension data for proposal support in group context.
+/// When present in the group context extensions, indicates the group
+/// uses proposal-by-reference flow.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ProposalSupport {
+    #[prost(uint32, tag = "1")]
+    pub version: u32,
 }
-/// Nested message and enum types in `OneshotMessage`.
-pub mod oneshot_message {
-    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
-    pub enum MessageType {
-        #[prost(message, tag = "1")]
-        ReaddRequest(super::ReaddRequest),
-    }
-}
-impl ::prost::Name for OneshotMessage {
-    const NAME: &'static str = "OneshotMessage";
+impl ::prost::Name for ProposalSupport {
+    const NAME: &'static str = "ProposalSupport";
     const PACKAGE: &'static str = "xmtp.mls.message_contents";
     fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.OneshotMessage".into()
+        "xmtp.mls.message_contents.ProposalSupport".into()
     }
     fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.OneshotMessage".into()
-    }
-}
-/// A request sent by an installation to recover from a fork. Other members
-/// may remove and readd that installation from the group.
-/// XIP: <https://community.xmtp.org/t/xip-68-draft-automated-fork-recovery/951>
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct ReaddRequest {
-    #[prost(bytes = "vec", tag = "1")]
-    pub group_id: ::prost::alloc::vec::Vec<u8>,
-    /// The sequence ID of the latest commit log entry at the time the request
-    /// is sent; used to disambiguate cases where an installation forks
-    /// and is readded multiple times.
-    #[prost(uint64, tag = "2")]
-    pub latest_commit_sequence_id: u64,
-}
-impl ::prost::Name for ReaddRequest {
-    const NAME: &'static str = "ReaddRequest";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.ReaddRequest".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.ReaddRequest".into()
-    }
-}
-/// Parent message for group metadata
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct GroupMetadataV1 {
-    #[prost(enumeration = "ConversationType", tag = "1")]
-    pub conversation_type: i32,
-    /// This will be removed soon
-    #[prost(string, tag = "2")]
-    pub creator_account_address: ::prost::alloc::string::String,
-    #[prost(string, tag = "3")]
-    pub creator_inbox_id: ::prost::alloc::string::String,
-    /// Should only be present for CONVERSATION_TYPE_DM
-    #[prost(message, optional, tag = "4")]
-    pub dm_members: ::core::option::Option<DmMembers>,
-    /// Should only be present for CONVERSATION_TYPE_ONESHOT
-    #[prost(message, optional, tag = "5")]
-    pub oneshot_message: ::core::option::Option<OneshotMessage>,
-}
-impl ::prost::Name for GroupMetadataV1 {
-    const NAME: &'static str = "GroupMetadataV1";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.GroupMetadataV1".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.GroupMetadataV1".into()
-    }
-}
-/// Wrapper around an Inbox Id
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct Inbox {
-    #[prost(string, tag = "1")]
-    pub inbox_id: ::prost::alloc::string::String,
-}
-impl ::prost::Name for Inbox {
-    const NAME: &'static str = "Inbox";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.Inbox".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.Inbox".into()
-    }
-}
-/// Ordering does not matter here
-#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct DmMembers {
-    #[prost(message, optional, tag = "1")]
-    pub dm_member_one: ::core::option::Option<Inbox>,
-    #[prost(message, optional, tag = "2")]
-    pub dm_member_two: ::core::option::Option<Inbox>,
-}
-impl ::prost::Name for DmMembers {
-    const NAME: &'static str = "DmMembers";
-    const PACKAGE: &'static str = "xmtp.mls.message_contents";
-    fn full_name() -> ::prost::alloc::string::String {
-        "xmtp.mls.message_contents.DmMembers".into()
-    }
-    fn type_url() -> ::prost::alloc::string::String {
-        "/xmtp.mls.message_contents.DmMembers".into()
-    }
-}
-/// Defines the type of conversation
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum ConversationType {
-    Unspecified = 0,
-    Group = 1,
-    Dm = 2,
-    Sync = 3,
-    Oneshot = 4,
-}
-impl ConversationType {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            Self::Unspecified => "CONVERSATION_TYPE_UNSPECIFIED",
-            Self::Group => "CONVERSATION_TYPE_GROUP",
-            Self::Dm => "CONVERSATION_TYPE_DM",
-            Self::Sync => "CONVERSATION_TYPE_SYNC",
-            Self::Oneshot => "CONVERSATION_TYPE_ONESHOT",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "CONVERSATION_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
-            "CONVERSATION_TYPE_GROUP" => Some(Self::Group),
-            "CONVERSATION_TYPE_DM" => Some(Self::Dm),
-            "CONVERSATION_TYPE_SYNC" => Some(Self::Sync),
-            "CONVERSATION_TYPE_ONESHOT" => Some(Self::Oneshot),
-            _ => None,
-        }
+        "/xmtp.mls.message_contents.ProposalSupport".into()
     }
 }
 /// Contains a mapping of `inbox_id` -> `sequence_id` for all members of a group.
@@ -1182,5 +733,555 @@ impl ::prost::Name for GroupMembership {
     }
     fn type_url() -> ::prost::alloc::string::String {
         "/xmtp.mls.message_contents.GroupMembership".into()
+    }
+}
+/// Message for group mutable metadata
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GroupMutableMetadataV1 {
+    /// Map to store various metadata attributes (Group name, etc.)
+    #[prost(map = "string, string", tag = "1")]
+    pub attributes: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+    #[prost(message, optional, tag = "2")]
+    pub admin_list: ::core::option::Option<Inboxes>,
+    /// Creator starts as only super_admin
+    /// Only super_admin can add/remove other super_admin
+    #[prost(message, optional, tag = "3")]
+    pub super_admin_list: ::core::option::Option<Inboxes>,
+}
+impl ::prost::Name for GroupMutableMetadataV1 {
+    const NAME: &'static str = "GroupMutableMetadataV1";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.GroupMutableMetadataV1".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.GroupMutableMetadataV1".into()
+    }
+}
+/// Wrapper around a list of repeated Inbox Ids
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Inboxes {
+    #[prost(string, repeated, tag = "1")]
+    pub inbox_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+impl ::prost::Name for Inboxes {
+    const NAME: &'static str = "Inboxes";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.Inboxes".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.Inboxes".into()
+    }
+}
+/// ContentTypeId is used to identify the type of content stored in a Message.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ContentTypeId {
+    /// authority governing this content type
+    #[prost(string, tag = "1")]
+    pub authority_id: ::prost::alloc::string::String,
+    /// type identifier
+    #[prost(string, tag = "2")]
+    pub type_id: ::prost::alloc::string::String,
+    /// major version of the type
+    #[prost(uint32, tag = "3")]
+    pub version_major: u32,
+    /// minor version of the type
+    #[prost(uint32, tag = "4")]
+    pub version_minor: u32,
+}
+impl ::prost::Name for ContentTypeId {
+    const NAME: &'static str = "ContentTypeId";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.ContentTypeId".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.ContentTypeId".into()
+    }
+}
+/// EncodedContent bundles the content with metadata identifying its type
+/// and parameters required for correct decoding and presentation of the content.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EncodedContent {
+    /// content type identifier used to match the payload with
+    /// the correct decoding machinery
+    #[prost(message, optional, tag = "1")]
+    pub r#type: ::core::option::Option<ContentTypeId>,
+    /// optional encoding parameters required to correctly decode the content
+    #[prost(map = "string, string", tag = "2")]
+    pub parameters: ::std::collections::HashMap<
+        ::prost::alloc::string::String,
+        ::prost::alloc::string::String,
+    >,
+    /// optional fallback description of the content that can be used in case
+    /// the client cannot decode or render the content
+    #[prost(string, optional, tag = "3")]
+    pub fallback: ::core::option::Option<::prost::alloc::string::String>,
+    /// optional compression; the value indicates algorithm used to
+    /// compress the encoded content bytes
+    #[prost(enumeration = "Compression", optional, tag = "5")]
+    pub compression: ::core::option::Option<i32>,
+    /// encoded content itself
+    #[prost(bytes = "vec", tag = "4")]
+    pub content: ::prost::alloc::vec::Vec<u8>,
+}
+impl ::prost::Name for EncodedContent {
+    const NAME: &'static str = "EncodedContent";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.EncodedContent".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.EncodedContent".into()
+    }
+}
+/// A PlaintextEnvelope is the outermost payload that gets encrypted by MLS
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PlaintextEnvelope {
+    /// Selector which declares which version of the EncodedContent this
+    /// PlaintextEnvelope is
+    #[prost(oneof = "plaintext_envelope::Content", tags = "1, 2")]
+    pub content: ::core::option::Option<plaintext_envelope::Content>,
+}
+/// Nested message and enum types in `PlaintextEnvelope`.
+pub mod plaintext_envelope {
+    /// Version 1 of the encrypted envelope
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+    pub struct V1 {
+        /// Expected to be EncodedContent
+        #[prost(bytes = "vec", tag = "1")]
+        pub content: ::prost::alloc::vec::Vec<u8>,
+        /// A unique value that can be used to ensure that the same content can
+        /// produce different hashes. May be the sender timestamp.
+        #[prost(string, tag = "2")]
+        pub idempotency_key: ::prost::alloc::string::String,
+    }
+    impl ::prost::Name for V1 {
+        const NAME: &'static str = "V1";
+        const PACKAGE: &'static str = "xmtp.mls.message_contents";
+        fn full_name() -> ::prost::alloc::string::String {
+            "xmtp.mls.message_contents.PlaintextEnvelope.V1".into()
+        }
+        fn type_url() -> ::prost::alloc::string::String {
+            "/xmtp.mls.message_contents.PlaintextEnvelope.V1".into()
+        }
+    }
+    /// Version 2 of the encrypted envelope
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+    pub struct V2 {
+        /// A unique value that can be used to ensure that the same content can
+        /// produce different hashes. May be the sender timestamp.
+        #[prost(string, tag = "1")]
+        pub idempotency_key: ::prost::alloc::string::String,
+        #[prost(oneof = "v2::MessageType", tags = "2, 3, 4, 5")]
+        pub message_type: ::core::option::Option<v2::MessageType>,
+    }
+    /// Nested message and enum types in `V2`.
+    pub mod v2 {
+        #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+        pub enum MessageType {
+            /// Expected to be EncodedContent
+            #[prost(bytes, tag = "2")]
+            Content(::prost::alloc::vec::Vec<u8>),
+            /// Initiator sends a request to receive sync payload
+            #[prost(message, tag = "3")]
+            DeviceSyncRequest(
+                super::super::super::super::device_sync::content::DeviceSyncRequest,
+            ),
+            /// Some other authorized installation sends a reply with a link to payload
+            #[prost(message, tag = "4")]
+            DeviceSyncReply(
+                super::super::super::super::device_sync::content::DeviceSyncReply,
+            ),
+            /// A serialized user preference update
+            #[prost(message, tag = "5")]
+            UserPreferenceUpdate(
+                super::super::super::super::device_sync::content::V1UserPreferenceUpdate,
+            ),
+        }
+    }
+    impl ::prost::Name for V2 {
+        const NAME: &'static str = "V2";
+        const PACKAGE: &'static str = "xmtp.mls.message_contents";
+        fn full_name() -> ::prost::alloc::string::String {
+            "xmtp.mls.message_contents.PlaintextEnvelope.V2".into()
+        }
+        fn type_url() -> ::prost::alloc::string::String {
+            "/xmtp.mls.message_contents.PlaintextEnvelope.V2".into()
+        }
+    }
+    /// Selector which declares which version of the EncodedContent this
+    /// PlaintextEnvelope is
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Content {
+        #[prost(message, tag = "1")]
+        V1(V1),
+        #[prost(message, tag = "2")]
+        V2(V2),
+    }
+}
+impl ::prost::Name for PlaintextEnvelope {
+    const NAME: &'static str = "PlaintextEnvelope";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.PlaintextEnvelope".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.PlaintextEnvelope".into()
+    }
+}
+/// Recognized compression algorithms
+/// protolint:disable ENUM_FIELD_NAMES_ZERO_VALUE_END_WITH
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum Compression {
+    Deflate = 0,
+    Gzip = 1,
+}
+impl Compression {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Deflate => "COMPRESSION_DEFLATE",
+            Self::Gzip => "COMPRESSION_GZIP",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "COMPRESSION_DEFLATE" => Some(Self::Deflate),
+            "COMPRESSION_GZIP" => Some(Self::Gzip),
+            _ => None,
+        }
+    }
+}
+/// PlaintextCommitLogEntry indicates whether a commit was successful or not,
+/// when applied on top of the indicated `last_epoch_authenticator`.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PlaintextCommitLogEntry {
+    /// The group_id of the group that the commit belongs to.
+    #[prost(bytes = "vec", tag = "1")]
+    pub group_id: ::prost::alloc::vec::Vec<u8>,
+    /// The sequence ID of the commit payload being validated.
+    #[prost(uint64, tag = "2")]
+    pub commit_sequence_id: u64,
+    /// The encryption state before the commit was applied.
+    #[prost(bytes = "vec", tag = "3")]
+    pub last_epoch_authenticator: ::prost::alloc::vec::Vec<u8>,
+    /// Indicates whether the commit was successful, or why it failed.
+    #[prost(enumeration = "CommitResult", tag = "4")]
+    pub commit_result: i32,
+    /// The epoch number after the commit was applied, if successful.
+    #[prost(uint64, tag = "5")]
+    pub applied_epoch_number: u64,
+    /// The encryption state after the commit was applied, if successful.
+    #[prost(bytes = "vec", tag = "6")]
+    pub applied_epoch_authenticator: ::prost::alloc::vec::Vec<u8>,
+}
+impl ::prost::Name for PlaintextCommitLogEntry {
+    const NAME: &'static str = "PlaintextCommitLogEntry";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.PlaintextCommitLogEntry".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.PlaintextCommitLogEntry".into()
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CommitLogEntry {
+    #[prost(uint64, tag = "1")]
+    pub sequence_id: u64,
+    #[prost(bytes = "vec", tag = "2")]
+    pub serialized_commit_log_entry: ::prost::alloc::vec::Vec<u8>,
+    #[prost(message, optional, tag = "3")]
+    pub signature: ::core::option::Option<
+        super::super::identity::associations::RecoverableEd25519Signature,
+    >,
+}
+impl ::prost::Name for CommitLogEntry {
+    const NAME: &'static str = "CommitLogEntry";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.CommitLogEntry".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.CommitLogEntry".into()
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum CommitResult {
+    Unspecified = 0,
+    Applied = 1,
+    WrongEpoch = 2,
+    Undecryptable = 3,
+    Invalid = 4,
+}
+impl CommitResult {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "COMMIT_RESULT_UNSPECIFIED",
+            Self::Applied => "COMMIT_RESULT_APPLIED",
+            Self::WrongEpoch => "COMMIT_RESULT_WRONG_EPOCH",
+            Self::Undecryptable => "COMMIT_RESULT_UNDECRYPTABLE",
+            Self::Invalid => "COMMIT_RESULT_INVALID",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "COMMIT_RESULT_UNSPECIFIED" => Some(Self::Unspecified),
+            "COMMIT_RESULT_APPLIED" => Some(Self::Applied),
+            "COMMIT_RESULT_WRONG_EPOCH" => Some(Self::WrongEpoch),
+            "COMMIT_RESULT_UNDECRYPTABLE" => Some(Self::Undecryptable),
+            "COMMIT_RESULT_INVALID" => Some(Self::Invalid),
+            _ => None,
+        }
+    }
+}
+/// Per-component permission policy with separate rules for insert, update,
+/// and delete operations.
+///
+/// Insert and update are separate because some components need different
+/// permission levels for creating vs modifying entries. For example, group
+/// membership allows any member to update (installations/sequence ID) but
+/// only admins to insert (add a new member).
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ComponentPermissions {
+    /// Policy for inserting a new value (component does not yet exist)
+    #[prost(message, optional, tag = "1")]
+    pub insert_policy: ::core::option::Option<MetadataPolicy>,
+    /// Policy for updating an existing value
+    #[prost(message, optional, tag = "2")]
+    pub update_policy: ::core::option::Option<MetadataPolicy>,
+    /// Policy for deleting a value
+    #[prost(message, optional, tag = "3")]
+    pub delete_policy: ::core::option::Option<MetadataPolicy>,
+}
+impl ::prost::Name for ComponentPermissions {
+    const NAME: &'static str = "ComponentPermissions";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.ComponentPermissions".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.ComponentPermissions".into()
+    }
+}
+/// Metadata describing a component: its data type and permission policies.
+///
+/// Stored as the value in the component registry (ComponentId 0x8000).
+/// Each registered component has one of these describing what kind of data
+/// it holds and who can insert, update, or delete it.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ComponentMetadata {
+    /// The data structure type of the component's value
+    #[prost(enumeration = "ComponentType", tag = "1")]
+    pub component_type: i32,
+    /// Permission policies for this component
+    #[prost(message, optional, tag = "2")]
+    pub permissions: ::core::option::Option<ComponentPermissions>,
+}
+impl ::prost::Name for ComponentMetadata {
+    const NAME: &'static str = "ComponentMetadata";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.ComponentMetadata".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.ComponentMetadata".into()
+    }
+}
+/// The data structure type of a component's value
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ComponentType {
+    Unspecified = 0,
+    /// Opaque bytes, replaced atomically
+    Bytes = 1,
+    /// A utf-8 encoded string, replaced atomically
+    String = 2,
+    /// A TlsMap\<bytes, bytes> supporting key-level insert/update/delete via deltas
+    TlsMapBytesBytes = 3,
+    /// A TlsMap\<InboxId, bytes> supporting key-level insert/update/delete via deltas
+    TlsMapInboxIdBytes = 4,
+    /// A TlsSet<bytes> supporting insert/remove/remove-by-hash via deltas
+    TlsSetBytes = 5,
+    /// A TlsSet<InboxId> supporting insert/remove/remove-by-hash via deltas
+    TlsSetInboxId = 6,
+}
+impl ComponentType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "COMPONENT_TYPE_UNSPECIFIED",
+            Self::Bytes => "COMPONENT_TYPE_BYTES",
+            Self::String => "COMPONENT_TYPE_STRING",
+            Self::TlsMapBytesBytes => "COMPONENT_TYPE_TLS_MAP_BYTES_BYTES",
+            Self::TlsMapInboxIdBytes => "COMPONENT_TYPE_TLS_MAP_INBOX_ID_BYTES",
+            Self::TlsSetBytes => "COMPONENT_TYPE_TLS_SET_BYTES",
+            Self::TlsSetInboxId => "COMPONENT_TYPE_TLS_SET_INBOX_ID",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "COMPONENT_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "COMPONENT_TYPE_BYTES" => Some(Self::Bytes),
+            "COMPONENT_TYPE_STRING" => Some(Self::String),
+            "COMPONENT_TYPE_TLS_MAP_BYTES_BYTES" => Some(Self::TlsMapBytesBytes),
+            "COMPONENT_TYPE_TLS_MAP_INBOX_ID_BYTES" => Some(Self::TlsMapInboxIdBytes),
+            "COMPONENT_TYPE_TLS_SET_BYTES" => Some(Self::TlsSetBytes),
+            "COMPONENT_TYPE_TLS_SET_INBOX_ID" => Some(Self::TlsSetInboxId),
+            _ => None,
+        }
+    }
+}
+/// A group member and affected installation IDs
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct MembershipChange {
+    #[prost(bytes = "vec", repeated, tag = "1")]
+    pub installation_ids: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
+    #[prost(string, tag = "2")]
+    pub account_address: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub initiated_by_account_address: ::prost::alloc::string::String,
+}
+impl ::prost::Name for MembershipChange {
+    const NAME: &'static str = "MembershipChange";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.MembershipChange".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.MembershipChange".into()
+    }
+}
+/// The group membership change proto
+///
+/// protolint:disable REPEATED_FIELD_NAMES_PLURALIZED
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GroupMembershipChanges {
+    /// Members that have been added in the commit
+    #[prost(message, repeated, tag = "1")]
+    pub members_added: ::prost::alloc::vec::Vec<MembershipChange>,
+    /// Members that have been removed in the commit
+    #[prost(message, repeated, tag = "2")]
+    pub members_removed: ::prost::alloc::vec::Vec<MembershipChange>,
+    /// Installations that have been added in the commit, grouped by member
+    #[prost(message, repeated, tag = "3")]
+    pub installations_added: ::prost::alloc::vec::Vec<MembershipChange>,
+    /// Installations removed in the commit, grouped by member
+    #[prost(message, repeated, tag = "4")]
+    pub installations_removed: ::prost::alloc::vec::Vec<MembershipChange>,
+}
+impl ::prost::Name for GroupMembershipChanges {
+    const NAME: &'static str = "GroupMembershipChanges";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.GroupMembershipChanges".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.GroupMembershipChanges".into()
+    }
+}
+/// A summary of the changes in a commit.
+/// Includes added/removed inboxes and changes to metadata
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GroupUpdated {
+    #[prost(string, tag = "1")]
+    pub initiated_by_inbox_id: ::prost::alloc::string::String,
+    /// The inboxes added in the commit
+    #[prost(message, repeated, tag = "2")]
+    pub added_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    /// The inboxes removed in the commit
+    #[prost(message, repeated, tag = "3")]
+    pub removed_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    /// The metadata changes in the commit
+    #[prost(message, repeated, tag = "4")]
+    pub metadata_field_changes: ::prost::alloc::vec::Vec<
+        group_updated::MetadataFieldChange,
+    >,
+    /// / The inboxes that were removed from the group in response to pending-remove/self-remove requests
+    #[prost(message, repeated, tag = "5")]
+    pub left_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    /// The inboxes that were added to admin list in the commit
+    #[prost(message, repeated, tag = "6")]
+    pub added_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    /// The inboxes that were removed from admin list in the commit
+    #[prost(message, repeated, tag = "7")]
+    pub removed_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    /// The inboxes that were added to super admin list in the commit
+    #[prost(message, repeated, tag = "8")]
+    pub added_super_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+    /// The inboxes that were removed from super admin list in the commit
+    #[prost(message, repeated, tag = "9")]
+    pub removed_super_admin_inboxes: ::prost::alloc::vec::Vec<group_updated::Inbox>,
+}
+/// Nested message and enum types in `GroupUpdated`.
+pub mod group_updated {
+    /// An inbox that was added or removed in this commit
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+    pub struct Inbox {
+        #[prost(string, tag = "1")]
+        pub inbox_id: ::prost::alloc::string::String,
+    }
+    impl ::prost::Name for Inbox {
+        const NAME: &'static str = "Inbox";
+        const PACKAGE: &'static str = "xmtp.mls.message_contents";
+        fn full_name() -> ::prost::alloc::string::String {
+            "xmtp.mls.message_contents.GroupUpdated.Inbox".into()
+        }
+        fn type_url() -> ::prost::alloc::string::String {
+            "/xmtp.mls.message_contents.GroupUpdated.Inbox".into()
+        }
+    }
+    /// A summary of a change to the mutable metadata
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+    pub struct MetadataFieldChange {
+        /// The field that was changed
+        #[prost(string, tag = "1")]
+        pub field_name: ::prost::alloc::string::String,
+        /// The previous value
+        #[prost(string, optional, tag = "2")]
+        pub old_value: ::core::option::Option<::prost::alloc::string::String>,
+        /// The updated value
+        #[prost(string, optional, tag = "3")]
+        pub new_value: ::core::option::Option<::prost::alloc::string::String>,
+    }
+    impl ::prost::Name for MetadataFieldChange {
+        const NAME: &'static str = "MetadataFieldChange";
+        const PACKAGE: &'static str = "xmtp.mls.message_contents";
+        fn full_name() -> ::prost::alloc::string::String {
+            "xmtp.mls.message_contents.GroupUpdated.MetadataFieldChange".into()
+        }
+        fn type_url() -> ::prost::alloc::string::String {
+            "/xmtp.mls.message_contents.GroupUpdated.MetadataFieldChange".into()
+        }
+    }
+}
+impl ::prost::Name for GroupUpdated {
+    const NAME: &'static str = "GroupUpdated";
+    const PACKAGE: &'static str = "xmtp.mls.message_contents";
+    fn full_name() -> ::prost::alloc::string::String {
+        "xmtp.mls.message_contents.GroupUpdated".into()
+    }
+    fn type_url() -> ::prost::alloc::string::String {
+        "/xmtp.mls.message_contents.GroupUpdated".into()
     }
 }
