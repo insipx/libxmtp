@@ -11,6 +11,10 @@ on:
           - "dev"
           - "rc"
           - "final"
+          # TODO(fork-test): remove "nightly" before merging. Production nightly
+          # must remain schedule-only; this dispatch entry exists so a fork can
+          # exercise the nightly path without waiting on cron.
+          - "nightly"
       ref:
         description: "Branch to release from (defaults to the branch the workflow is run from)"
         required: false
@@ -72,9 +76,16 @@ jobs:
           INPUT_NODE: ${{ inputs.node }}
           INPUT_WASM: ${{ inputs.wasm }}
         run: |
-          if [ "$EVENT_NAME" = "schedule" ]; then
+          # TODO(fork-test): remove the `|| INPUT_RELEASE_TYPE = nightly` branch
+          # before merging. On a fork it lets workflow_dispatch with
+          # release-type=nightly behave like the schedule trigger.
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$INPUT_RELEASE_TYPE" = "nightly" ]; then
             echo "release-type=nightly" >> "$GITHUB_OUTPUT"
-            echo "ref=main" >> "$GITHUB_OUTPUT"
+            if [ "$EVENT_NAME" = "schedule" ]; then
+              echo "ref=main" >> "$GITHUB_OUTPUT"
+            else
+              echo "ref=${INPUT_REF:-$GITHUB_REF}" >> "$GITHUB_OUTPUT"
+            fi
             echo "ios=true" >> "$GITHUB_OUTPUT"
             echo "android=true" >> "$GITHUB_OUTPUT"
             echo "node=true" >> "$GITHUB_OUTPUT"
