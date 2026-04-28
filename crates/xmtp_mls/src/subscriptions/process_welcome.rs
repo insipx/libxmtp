@@ -10,7 +10,7 @@ use xmtp_common::{Retry, retry_async};
 use xmtp_db::{consent_record::ConsentState, group::ConversationType, prelude::*};
 use xmtp_proto::types::OriginatorId;
 use xmtp_proto::types::SequenceId;
-use xmtp_proto::types::{Cursor, WelcomeMessage};
+use xmtp_proto::types::{Cursor, GroupId, WelcomeMessage};
 
 /// Future for processing `WelcomeorGroup`
 pub struct ProcessWelcomeFuture<Context> {
@@ -206,7 +206,10 @@ where
         // Filter out duplicate DMs if not included
         if !self.include_duplicate_dms
             && metadata.conversation_type == ConversationType::Dm
-            && self.context.db().has_duplicate_dm(&group.group_id)?
+            && self
+                .context
+                .db()
+                .has_duplicate_dm(&GroupId::from(group.group_id.as_slice()))?
         {
             tracing::debug!("Duplicate DM group detected. Skipping stream.");
             return Ok(false);
@@ -360,7 +363,7 @@ where
         );
         Ok(Some(MlsGroup::new(
             self.context.clone(),
-            group.id,
+            group.id.to_vec(),
             group.dm_id,
             group.conversation_type,
             group.created_at_ns,

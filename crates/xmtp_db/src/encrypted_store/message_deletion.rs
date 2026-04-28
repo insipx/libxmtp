@@ -4,6 +4,7 @@ use crate::{DbConnection, impl_store, impl_store_or_ignore, schema::message_dele
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use xmtp_proto::types::GroupId;
 #[derive(
     Debug,
     Clone,
@@ -60,7 +61,7 @@ pub trait QueryMessageDeletion {
     /// Get all deletions in a group
     fn get_group_deletions(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Vec<StoredMessageDeletion>, crate::ConnectionError>;
 
     /// Check if a message has been deleted
@@ -94,7 +95,7 @@ where
 
     fn get_group_deletions(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Vec<StoredMessageDeletion>, crate::ConnectionError> {
         (**self).get_group_deletions(group_id)
     }
@@ -146,7 +147,7 @@ impl<C: ConnectionExt> QueryMessageDeletion for DbConnection<C> {
 
     fn get_group_deletions(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Vec<StoredMessageDeletion>, crate::ConnectionError> {
         self.raw_query(|conn| {
             dsl::message_deletions
@@ -176,7 +177,7 @@ mod tests {
 
     fn create_test_group(conn: &DbConnection<impl ConnectionExt>, group_id: Vec<u8>) {
         StoredGroup {
-            id: group_id,
+            id: group_id.into(),
             created_at_ns: 0,
             membership_state: GroupMembershipState::Allowed,
             installations_last_checked: 0,
@@ -380,12 +381,12 @@ mod tests {
             .store(conn)?;
 
             // Get deletions for group1
-            let group1_deletions = conn.get_group_deletions(&group1)?;
+            let group1_deletions = conn.get_group_deletions(&GroupId::from(group1.clone()))?;
             assert_eq!(group1_deletions.len(), 1);
             assert_eq!(group1_deletions[0].deleted_message_id, msg1);
 
             // Get deletions for group2
-            let group2_deletions = conn.get_group_deletions(&group2)?;
+            let group2_deletions = conn.get_group_deletions(&GroupId::from(group2.clone()))?;
             assert_eq!(group2_deletions.len(), 1);
             assert_eq!(group2_deletions[0].deleted_message_id, msg2);
         })

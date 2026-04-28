@@ -6,6 +6,7 @@ use diesel::prelude::*;
 use diesel::select;
 use serde::{Deserialize, Serialize};
 
+use xmtp_proto::types::GroupId;
 #[derive(
     Debug,
     Clone,
@@ -34,16 +35,16 @@ impl_fetch!(PendingRemove, pending_remove);
 pub trait QueryPendingRemove {
     fn get_pending_remove_users(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Vec<String>, crate::ConnectionError>;
     fn get_user_pending_remove_status(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         inbox_id: &str,
     ) -> Result<bool, crate::ConnectionError>;
     fn delete_pending_remove_users(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         inbox_ids: Vec<String>,
     ) -> Result<usize, crate::ConnectionError>;
 }
@@ -53,20 +54,20 @@ where
 {
     fn get_pending_remove_users(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Vec<String>, crate::ConnectionError> {
         (**self).get_pending_remove_users(group_id)
     }
     fn get_user_pending_remove_status(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         inbox_id: &str,
     ) -> Result<bool, crate::ConnectionError> {
         (**self).get_user_pending_remove_status(group_id, inbox_id)
     }
     fn delete_pending_remove_users(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         inbox_ids: Vec<String>,
     ) -> Result<usize, crate::ConnectionError> {
         (**self).delete_pending_remove_users(group_id, inbox_ids)
@@ -75,7 +76,7 @@ where
 impl<C: ConnectionExt> QueryPendingRemove for DbConnection<C> {
     fn get_pending_remove_users(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Vec<String>, crate::ConnectionError> {
         let result = self.raw_query(|conn| {
             dsl::pending_remove
@@ -89,7 +90,7 @@ impl<C: ConnectionExt> QueryPendingRemove for DbConnection<C> {
 
     fn get_user_pending_remove_status(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         inbox_id: &str,
     ) -> Result<bool, crate::ConnectionError> {
         let result: bool = self.raw_query(|conn| {
@@ -103,7 +104,7 @@ impl<C: ConnectionExt> QueryPendingRemove for DbConnection<C> {
 
     fn delete_pending_remove_users(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         inbox_ids: Vec<String>,
     ) -> Result<usize, crate::ConnectionError> {
         let result = self.raw_query(|conn| {
@@ -121,6 +122,7 @@ impl<C: ConnectionExt> QueryPendingRemove for DbConnection<C> {
 }
 #[cfg(test)]
 mod tests {
+    use super::GroupId;
     use crate::encrypted_store::pending_remove::{PendingRemove, QueryPendingRemove};
     use crate::{StoreOrIgnore, with_connection};
 
@@ -134,9 +136,13 @@ mod tests {
                 message_id: vec![1, 2, 3],
             }
             .store_or_ignore(conn)?;
-            let users = conn.get_pending_remove_users(&[1, 2, 3]).unwrap();
+            let users = conn
+                .get_pending_remove_users(&GroupId::from(&[1u8, 2, 3][..]))
+                .unwrap();
             assert_eq!(users.len(), 1);
-            let users = conn.get_pending_remove_users(&[1]).unwrap();
+            let users = conn
+                .get_pending_remove_users(&GroupId::from(&[1u8][..]))
+                .unwrap();
             assert_eq!(users.len(), 0);
         })
     }
@@ -163,16 +169,17 @@ mod tests {
                 message_id: vec![1, 2, 3],
             }
             .store_or_ignore(conn)?;
-            let users = conn.get_pending_remove_users(&[1, 2, 3]).unwrap();
+            let group_id: GroupId = vec![1u8, 2, 3].into();
+            let users = conn.get_pending_remove_users(&group_id).unwrap();
             assert_eq!(users.len(), 3);
             let deleted_users = conn
-                .delete_pending_remove_users(&[1, 2, 3], vec!["1".to_string(), "2".to_string()])
+                .delete_pending_remove_users(&group_id, vec!["1".to_string(), "2".to_string()])
                 .unwrap();
             assert_eq!(deleted_users, 2usize);
-            let users = conn.get_pending_remove_users(&[1, 2, 3]).unwrap();
+            let users = conn.get_pending_remove_users(&group_id).unwrap();
             assert_eq!(users.len(), 1);
             let deleted_users = conn
-                .delete_pending_remove_users(&[1], vec!["3".to_string()])
+                .delete_pending_remove_users(&GroupId::from(&[1u8][..]), vec!["3".to_string()])
                 .unwrap();
             assert_eq!(deleted_users, 0usize);
         })

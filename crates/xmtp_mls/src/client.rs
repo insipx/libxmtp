@@ -65,6 +65,7 @@ use xmtp_proto::{
 };
 use xmtp_proto::{types::InstallationId, xmtp::identity::associations::IdentifierKind};
 
+use xmtp_proto::types::GroupId;
 /// Enum representing the network the Client is connected to
 #[derive(Clone, Copy, Default, Debug)]
 pub enum Network {
@@ -741,7 +742,7 @@ where
         if let Some(group) = group {
             return Ok(MlsGroup::new(
                 self.context.clone(),
-                group.id,
+                group.id.to_vec(),
                 group.dm_id,
                 group.conversation_type,
                 group.created_at_ns,
@@ -754,7 +755,7 @@ where
     ///
     /// Returns a [`MlsGroup`] if the group exists, or an error if it does not
     ///
-    pub fn group(&self, group_id: &Vec<u8>) -> Result<MlsGroup<Context>, ClientError> {
+    pub fn group(&self, group_id: &[u8]) -> Result<MlsGroup<Context>, ClientError> {
         MlsStore::new(self.context.clone())
             .group(group_id)
             .map_err(Into::into)
@@ -766,12 +767,12 @@ where
     ///
     pub fn stitched_group(&self, group_id: &[u8]) -> Result<MlsGroup<Context>, ClientError> {
         let conn = self.context.db();
-        let stored_group = conn.fetch_stitched(group_id)?;
+        let stored_group = conn.fetch_stitched(&GroupId::from(group_id))?;
         stored_group
             .map(|g| {
                 MlsGroup::new(
                     self.context.clone(),
-                    g.id,
+                    g.id.to_vec(),
                     g.dm_id,
                     g.conversation_type,
                     g.created_at_ns,
@@ -821,7 +822,7 @@ where
             .ok_or(NotFound::DmByInbox(target_inbox_id))?;
         Ok(MlsGroup::new(
             self.context.clone(),
-            group.id,
+            group.id.to_vec(),
             group.dm_id,
             group.conversation_type,
             group.created_at_ns,
@@ -913,7 +914,7 @@ where
                     // Only construct StoredGroupMessage if all fields are Some
                     let msg: Option<StoredGroupMessage> = Some(StoredGroupMessage {
                         id: message_id,
-                        group_id: conversation_item.id.clone(),
+                        group_id: conversation_item.id.to_vec(),
                         decrypted_message_bytes: conversation_item.decrypted_message_bytes?,
                         sent_at_ns: conversation_item.sent_at_ns?,
                         sender_installation_id: conversation_item.sender_installation_id?,
@@ -940,7 +941,7 @@ where
                 ConversationListItem {
                     group: MlsGroup::new(
                         self.context.clone(),
-                        conversation_item.id,
+                        conversation_item.id.to_vec(),
                         conversation_item.dm_id,
                         conversation_item.conversation_type,
                         conversation_item.created_at_ns,
@@ -1117,7 +1118,7 @@ where
             .map(|g| {
                 MlsGroup::new(
                     self.context.clone(),
-                    g.id,
+                    g.id.to_vec(),
                     g.dm_id,
                     g.conversation_type,
                     g.created_at_ns,

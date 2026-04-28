@@ -1927,7 +1927,7 @@ fn test_count_group_messages_dm_vs_regular_groups() {
         regular_group.store(conn).unwrap();
 
         // Create identical message sets for both groups
-        let create_messages = |group_id: &Vec<u8>| {
+        let create_messages = |group_id: &[u8]| {
             vec![
                 generate_message(
                     Some(GroupMessageKind::Application),

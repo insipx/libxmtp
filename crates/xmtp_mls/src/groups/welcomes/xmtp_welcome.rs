@@ -38,6 +38,7 @@ use xmtp_mls_common::{
 use xmtp_proto::types::Cursor;
 use xmtp_proto::xmtp::mls::message_contents::{ContentTypeId, GroupUpdated, group_updated::Inbox};
 
+use xmtp_proto::types::GroupId;
 /// Create a group from a decrypted and decoded welcome message.
 /// If the group already exists in the store, overwrite the MLS state and do not update the group entry
 ///
@@ -180,7 +181,7 @@ where
 
             let group = MlsGroup::<_>::new(
                 context.clone(),
-                group.id,
+                group.id.to_vec(),
                 group.dm_id,
                 group.conversation_type,
                 group.created_at_ns,
@@ -208,7 +209,10 @@ where
         let group_id = staged_welcome.public_group().group_id();
         // try to load the group this welcome represents
         // defensive to avoid race conditions & duplicates
-        if db.find_group(group_id.as_slice())?.is_some() {
+        if db
+            .find_group(&GroupId::from(group_id.as_slice()))?
+            .is_some()
+        {
             // Fetch the original MLS group, rather than the one from the welcome
             let result = MlsGroup::new_cached(self.context.clone(), group_id.as_slice());
             if let Ok((group, _)) = result {
@@ -335,7 +339,7 @@ where
 
         // Extract group_id before consuming staged_welcome
         let group_id = staged_welcome.public_group().group_id().to_vec();
-        let existing_group = db.find_group(group_id.as_slice())?;
+        let existing_group = db.find_group(&GroupId::from(group_id.as_slice()))?;
 
         // Check if this is a re-add scenario:
         // - Self-removal (PendingRemove): user left voluntarily, then gets re-added
@@ -510,7 +514,7 @@ where
         // this is the commit that brought us into the group
         let added_msg = StoredGroupMessage {
             id: added_message_id,
-            group_id: stored_group.id.clone(),
+            group_id: stored_group.id.to_vec(),
             decrypted_message_bytes: encoded_added_payload_bytes,
             sent_at_ns: welcome.timestamp(),
             kind: GroupMessageKind::MembershipChange,
@@ -538,7 +542,7 @@ where
 
         let group = MlsGroup::new(
             context.clone(),
-            stored_group.id,
+            stored_group.id.to_vec(),
             stored_group.dm_id,
             stored_group.conversation_type,
             stored_group.created_at_ns,

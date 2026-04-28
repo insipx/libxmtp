@@ -3,23 +3,24 @@ use crate::ConnectionExt;
 use super::*;
 use crate::ConnectionError;
 
+use xmtp_proto::types::GroupId;
 pub trait QueryDms {
     /// Same behavior as fetched, but will stitch DM groups
-    fn fetch_stitched(&self, key: &[u8]) -> Result<Option<StoredGroup>, ConnectionError>;
+    fn fetch_stitched(&self, key: &GroupId) -> Result<Option<StoredGroup>, ConnectionError>;
 
     fn find_active_dm_group<M>(&self, members: M) -> Result<Option<StoredGroup>, ConnectionError>
     where
         M: std::fmt::Display;
 
     /// Load the other DMs that are stitched into this group
-    fn other_dms(&self, group_id: &[u8]) -> Result<Vec<StoredGroup>, ConnectionError>;
+    fn other_dms(&self, group_id: &GroupId) -> Result<Vec<StoredGroup>, ConnectionError>;
 }
 
 impl<T> QueryDms for &T
 where
     T: QueryDms,
 {
-    fn fetch_stitched(&self, key: &[u8]) -> Result<Option<StoredGroup>, ConnectionError> {
+    fn fetch_stitched(&self, key: &GroupId) -> Result<Option<StoredGroup>, ConnectionError> {
         (**self).fetch_stitched(key)
     }
 
@@ -30,14 +31,14 @@ where
         (**self).find_active_dm_group(members)
     }
 
-    fn other_dms(&self, group_id: &[u8]) -> Result<Vec<StoredGroup>, ConnectionError> {
+    fn other_dms(&self, group_id: &GroupId) -> Result<Vec<StoredGroup>, ConnectionError> {
         (**self).other_dms(group_id)
     }
 }
 
 impl<C: ConnectionExt> QueryDms for DbConnection<C> {
     /// Same behavior as fetched, but will stitch DM groups
-    fn fetch_stitched(&self, key: &[u8]) -> Result<Option<StoredGroup>, ConnectionError> {
+    fn fetch_stitched(&self, key: &GroupId) -> Result<Option<StoredGroup>, ConnectionError> {
         let group = self.raw_query(|conn| {
             groups::table
                 .filter(groups::id.eq(key))
@@ -77,7 +78,7 @@ impl<C: ConnectionExt> QueryDms for DbConnection<C> {
     }
 
     /// Load the other DMs that are stitched into this group
-    fn other_dms(&self, group_id: &[u8]) -> Result<Vec<StoredGroup>, ConnectionError> {
+    fn other_dms(&self, group_id: &GroupId) -> Result<Vec<StoredGroup>, ConnectionError> {
         let query = dsl::groups.filter(dsl::id.eq(group_id));
 
         let groups: Vec<StoredGroup> = self.raw_query(|conn| query.load(conn))?;

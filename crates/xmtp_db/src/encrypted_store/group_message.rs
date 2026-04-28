@@ -28,7 +28,7 @@ use xmtp_content_types::{
     membership_change, multi_remote_attachment, reaction, read_receipt, remote_attachment, reply,
     text, transaction_reference, wallet_send_calls,
 };
-use xmtp_proto::types::Cursor;
+use xmtp_proto::types::{Cursor, GroupId};
 
 mod convert;
 #[cfg(test)]
@@ -514,14 +514,14 @@ pub trait QueryGroupMessage {
     /// Query for group messages
     fn get_group_messages(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessage>, crate::ConnectionError>;
 
     /// Count group messages matching the given criteria
     fn count_group_messages(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<i64, crate::ConnectionError>;
 
@@ -534,26 +534,26 @@ pub trait QueryGroupMessage {
     /// Query for group messages with their reactions
     fn get_group_messages_with_reactions(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessageWithReactions>, crate::ConnectionError>;
 
     fn get_inbound_relations(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
         relation_query: RelationQuery,
     ) -> Result<InboundRelations, crate::ConnectionError>;
 
     fn get_outbound_relations(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
     ) -> Result<OutboundRelations, crate::ConnectionError>;
 
     fn get_inbound_relation_counts(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
         relation_query: RelationQuery,
     ) -> Result<RelationCounts, crate::ConnectionError>;
@@ -564,9 +564,9 @@ pub trait QueryGroupMessage {
         id: MessageId,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError>;
 
-    fn get_latest_message_times_by_sender<GroupId: AsRef<[u8]>>(
+    fn get_latest_message_times_by_sender<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         allowed_content_types: &[ContentType],
     ) -> Result<LatestMessageTimeBySender, crate::ConnectionError>;
 
@@ -576,15 +576,15 @@ pub trait QueryGroupMessage {
         id: MessageId,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError>;
 
-    fn get_group_message_by_timestamp<GroupId: AsRef<[u8]>>(
+    fn get_group_message_by_timestamp<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         timestamp: i64,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError>;
 
-    fn get_group_message_by_cursor<GroupId: AsRef<[u8]>>(
+    fn get_group_message_by_cursor<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         sequence_id: Cursor,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError>;
 
@@ -635,7 +635,7 @@ where
     /// Query for group messages
     fn get_group_messages(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessage>, crate::ConnectionError> {
         (**self).get_group_messages(group_id, args)
@@ -644,7 +644,7 @@ where
     /// Count group messages matching the given criteria
     fn count_group_messages(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<i64, crate::ConnectionError> {
         (**self).count_group_messages(group_id, args)
@@ -661,7 +661,7 @@ where
     /// Query for group messages with their reactions
     fn get_group_messages_with_reactions(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessageWithReactions>, crate::ConnectionError> {
         (**self).get_group_messages_with_reactions(group_id, args)
@@ -669,7 +669,7 @@ where
 
     fn get_inbound_relations(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
         relation_query: RelationQuery,
     ) -> Result<InboundRelations, crate::ConnectionError> {
@@ -678,7 +678,7 @@ where
 
     fn get_outbound_relations(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
     ) -> Result<OutboundRelations, crate::ConnectionError> {
         (**self).get_outbound_relations(group_id, message_ids)
@@ -686,16 +686,16 @@ where
 
     fn get_inbound_relation_counts(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
         relation_query: RelationQuery,
     ) -> Result<RelationCounts, crate::ConnectionError> {
         (**self).get_inbound_relation_counts(group_id, message_ids, relation_query)
     }
 
-    fn get_latest_message_times_by_sender<GroupId: AsRef<[u8]>>(
+    fn get_latest_message_times_by_sender<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         allowed_content_types: &[ContentType],
     ) -> Result<LatestMessageTimeBySender, crate::ConnectionError> {
         (**self).get_latest_message_times_by_sender(group_id, allowed_content_types)
@@ -717,17 +717,17 @@ where
         (**self).write_conn_get_group_message(id)
     }
 
-    fn get_group_message_by_timestamp<GroupId: AsRef<[u8]>>(
+    fn get_group_message_by_timestamp<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         timestamp: i64,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError> {
         (**self).get_group_message_by_timestamp(group_id, timestamp)
     }
 
-    fn get_group_message_by_cursor<GroupId: AsRef<[u8]>>(
+    fn get_group_message_by_cursor<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         cursor: Cursor,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError> {
         (**self).get_group_message_by_cursor(group_id, cursor)
@@ -834,14 +834,14 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
     /// Query for group messages
     fn get_group_messages(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessage>, crate::ConnectionError> {
         use crate::schema::group_messages::dsl;
 
         // Start with base query
         let mut query = dsl::group_messages
-            .filter(group_id_filter(group_id))
+            .filter(group_id_filter(group_id.as_ref()))
             .into_boxed();
 
         // Apply common filters using macro
@@ -879,7 +879,7 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
     /// Count group messages matching the given criteria
     fn count_group_messages(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<i64, crate::ConnectionError> {
         use crate::schema::{group_messages::dsl, groups::dsl as groups_dsl};
@@ -900,7 +900,7 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
 
         // Start with base query
         let mut query = dsl::group_messages
-            .filter(group_id_filter(group_id))
+            .filter(group_id_filter(group_id.as_ref()))
             .into_boxed();
 
         // For DM groups, exclude GroupUpdated messages unless specifically requested
@@ -972,7 +972,7 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
     /// Query for group messages with their reactions
     fn get_group_messages_with_reactions(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessageWithReactions>, crate::ConnectionError> {
         // First get all the main messages
@@ -1004,7 +1004,7 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
         let message_ids: Vec<&[u8]> = messages.iter().map(|m| m.id.as_slice()).collect();
 
         let mut reactions_query = dsl::group_messages
-            .filter(group_id_filter(group_id))
+            .filter(group_id_filter(group_id.as_ref()))
             .filter(dsl::reference_id.is_not_null())
             .filter(dsl::reference_id.eq_any(message_ids))
             .into_boxed();
@@ -1049,14 +1049,14 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
 
     fn get_inbound_relations(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
         relation_query: RelationQuery,
     ) -> Result<InboundRelations, crate::ConnectionError> {
         let mut inbound_relations: HashMap<Vec<u8>, Vec<StoredGroupMessage>> = HashMap::new();
 
         let mut inbound_relations_query = dsl::group_messages
-            .filter(group_id_filter(group_id))
+            .filter(group_id_filter(group_id.as_ref()))
             .filter(dsl::reference_id.is_not_null())
             .filter(dsl::reference_id.eq_any(message_ids))
             .into_boxed();
@@ -1093,11 +1093,11 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
 
     fn get_outbound_relations(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         reference_ids: &[&[u8]],
     ) -> Result<OutboundRelations, crate::ConnectionError> {
         let outbound_references_query = dsl::group_messages
-            .filter(group_id_filter(group_id))
+            .filter(group_id_filter(group_id.as_ref()))
             .filter(dsl::id.eq_any(reference_ids))
             .into_boxed();
 
@@ -1112,12 +1112,12 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
 
     fn get_inbound_relation_counts(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         message_ids: &[&[u8]],
         relation_query: RelationQuery,
     ) -> Result<RelationCounts, crate::ConnectionError> {
         let mut count_query = dsl::group_messages
-            .filter(group_id_filter(group_id))
+            .filter(group_id_filter(group_id.as_ref()))
             .filter(dsl::reference_id.is_not_null())
             .filter(dsl::reference_id.eq_any(message_ids))
             .group_by(dsl::reference_id)
@@ -1137,9 +1137,9 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
             .collect())
     }
 
-    fn get_latest_message_times_by_sender<GroupId: AsRef<[u8]>>(
+    fn get_latest_message_times_by_sender<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         allowed_content_types: &[ContentType],
     ) -> Result<LatestMessageTimeBySender, crate::ConnectionError> {
         let query = dsl::group_messages
@@ -1185,9 +1185,9 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
         })
     }
 
-    fn get_group_message_by_timestamp<GroupId: AsRef<[u8]>>(
+    fn get_group_message_by_timestamp<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         timestamp: i64,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError> {
         self.raw_query(|conn| {
@@ -1199,9 +1199,9 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
         })
     }
 
-    fn get_group_message_by_cursor<GroupId: AsRef<[u8]>>(
+    fn get_group_message_by_cursor<Id: AsRef<[u8]>>(
         &self,
-        group_id: GroupId,
+        group_id: Id,
         cursor: Cursor,
     ) -> Result<Option<StoredGroupMessage>, crate::ConnectionError> {
         self.raw_query(|conn| {
@@ -1309,7 +1309,7 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
             for (group_id, global_cursor) in batch {
                 if global_cursor.is_empty() {
                     // No cursor for this group - include all messages
-                    batch_filter = Box::new(batch_filter.or(dsl::group_id.eq(group_id.as_slice())));
+                    batch_filter = Box::new(batch_filter.or(dsl::group_id.eq(group_id)));
                 } else {
                     // Build condition for this group: group_id matches AND (originator conditions)
                     let known_originators: Vec<i64> =
@@ -1341,8 +1341,7 @@ impl<C: ConnectionExt> QueryGroupMessage for DbConnection<C> {
 
                     // Combine: this group AND (originator conditions)
                     batch_filter = Box::new(
-                        batch_filter
-                            .or(dsl::group_id.eq(group_id.as_slice()).and(originator_filter)),
+                        batch_filter.or(dsl::group_id.eq(group_id).and(originator_filter)),
                     );
                 }
             }

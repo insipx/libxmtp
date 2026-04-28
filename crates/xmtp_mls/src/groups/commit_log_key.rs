@@ -15,6 +15,7 @@ use xmtp_db::{
 use xmtp_proto::xmtp::mls::api::v1::QueryCommitLogResponse;
 use xmtp_proto::xmtp::mls::message_contents::CommitLogEntry as CommitLogEntryProto;
 
+use xmtp_proto::types::GroupId;
 pub(crate) trait CommitLogKeyCrypto {
     type Error: std::error::Error;
     fn generate_commit_log_key(&self) -> Result<Secret, Self::Error>;
@@ -131,7 +132,7 @@ pub(crate) async fn derive_consensus_public_key(
             )
             .await?;
             context.db().set_group_commit_log_public_key(
-                &commit_log_response.group_id,
+                &GroupId::from(commit_log_response.group_id.as_slice()),
                 &signature.public_key,
             )?;
             return Ok(Some(signature.public_key.clone()));
@@ -490,7 +491,7 @@ mod tests {
         let mutable_metadata_key = metadata.commit_log_signer().unwrap();
 
         let conversation = StoredGroupCommitLogPublicKey {
-            id: group.group_id.clone(),
+            id: group.group_id.clone().into(),
             commit_log_public_key: None, // No consensus key
         };
 
@@ -522,7 +523,7 @@ mod tests {
             .to_vec();
 
         let conversation = StoredGroupCommitLogPublicKey {
-            id: group.group_id.clone(),
+            id: group.group_id.clone().into(),
             commit_log_public_key: Some(consensus_public_key),
         };
 
@@ -551,7 +552,7 @@ mod tests {
 
         // Set consensus key that matches the stored key
         let conversation = StoredGroupCommitLogPublicKey {
-            id: group.group_id.clone(),
+            id: group.group_id.clone().into(),
             commit_log_public_key: Some(stored_public_key),
         };
 
@@ -574,7 +575,7 @@ mod tests {
 
         // Set consensus key that matches the mutable metadata key
         let conversation = StoredGroupCommitLogPublicKey {
-            id: group.group_id.clone(),
+            id: group.group_id.clone().into(),
             commit_log_public_key: Some(metadata_public_key),
         };
 
@@ -609,7 +610,7 @@ mod tests {
             .to_vec();
 
         let conversation = StoredGroupCommitLogPublicKey {
-            id: group_id,
+            id: group_id.into(),
             commit_log_public_key: Some(consensus_public_key),
         };
 

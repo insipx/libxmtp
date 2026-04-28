@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use xmtp_common::snippet::Snippet;
 use xmtp_proto::xmtp::mls::message_contents::CommitResult as ProtoCommitResult;
 
+use xmtp_proto::types::GroupId;
 #[derive(Insertable, Debug, Clone)]
 #[diesel(table_name = remote_commit_log)]
 pub struct NewRemoteCommitLog {
@@ -140,12 +141,12 @@ pub enum RemoteCommitLogOrder {
 pub trait QueryRemoteCommitLog {
     fn get_latest_remote_log_for_group(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Option<RemoteCommitLog>, crate::ConnectionError>;
 
     fn get_remote_commit_log_after_cursor(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         after_cursor: i64,
         order_by: RemoteCommitLogOrder,
     ) -> Result<Vec<RemoteCommitLog>, crate::ConnectionError>;
@@ -157,14 +158,14 @@ where
 {
     fn get_latest_remote_log_for_group(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Option<RemoteCommitLog>, crate::ConnectionError> {
         (**self).get_latest_remote_log_for_group(group_id)
     }
 
     fn get_remote_commit_log_after_cursor(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         after_cursor: i64,
         order_by: RemoteCommitLogOrder,
     ) -> Result<Vec<RemoteCommitLog>, crate::ConnectionError> {
@@ -175,7 +176,7 @@ where
 impl<C: ConnectionExt> QueryRemoteCommitLog for DbConnection<C> {
     fn get_latest_remote_log_for_group(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
     ) -> Result<Option<RemoteCommitLog>, crate::ConnectionError> {
         self.raw_query(|db| {
             dsl::remote_commit_log
@@ -189,7 +190,7 @@ impl<C: ConnectionExt> QueryRemoteCommitLog for DbConnection<C> {
 
     fn get_remote_commit_log_after_cursor(
         &self,
-        group_id: &[u8],
+        group_id: &GroupId,
         after_cursor: i64,
         order: RemoteCommitLogOrder,
     ) -> Result<Vec<RemoteCommitLog>, crate::ConnectionError> {

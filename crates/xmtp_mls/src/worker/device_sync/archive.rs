@@ -19,6 +19,7 @@ use xmtp_mls_common::group::{DMMetadataOptions, GroupMetadataOptions};
 use xmtp_mls_common::group_mutable_metadata::MessageDisappearingSettings;
 use xmtp_proto::xmtp::device_sync::{BackupElement, backup_element::Element};
 
+use xmtp_proto::types::GroupId;
 #[derive(Default)]
 struct ImportContext {
     group_timestamps: HashMap<Vec<u8>, Option<i64>>,
@@ -78,7 +79,9 @@ fn insert(
             context.db().insert_newer_consent_record(consent)?;
         }
         Element::Group(save) => {
-            if let Ok(Some(existing_group)) = context.db().find_group(&save.id) {
+            if let Ok(Some(existing_group)) =
+                context.db().find_group(&GroupId::from(save.id.as_slice()))
+            {
                 let timestamp = match (existing_group.last_message_ns, save.last_message_ns) {
                     (Some(e), Some(s)) => Some(e.max(s)),
                     (None, Some(s)) => Some(s),
@@ -88,7 +91,7 @@ fn insert(
 
                 import_context
                     .group_timestamps
-                    .insert(existing_group.id, timestamp);
+                    .insert(existing_group.id.to_vec(), timestamp);
                 // Do not restore groups that already exist.
                 return Ok(());
             }
@@ -242,15 +245,15 @@ mod tests {
 
         let alix_timestamp = alix
             .db()
-            .find_group(&alix_group.group_id)??
+            .find_group(&GroupId::from(alix_group.group_id.as_slice()))??
             .last_message_ns?;
         let alix2_timestamp = alix2
             .db()
-            .find_group(&alix_group.group_id)??
+            .find_group(&GroupId::from(alix_group.group_id.as_slice()))??
             .last_message_ns?;
         let alix3_timestamp = alix3
             .db()
-            .find_group(&alix_group.group_id)??
+            .find_group(&GroupId::from(alix_group.group_id.as_slice()))??
             .last_message_ns?;
 
         // Alix2's older timestamp on the existing group should be updated.
@@ -271,7 +274,7 @@ mod tests {
 
         let timestamp = alix
             .db()
-            .find_group(&alix_bo_dm.group_id)??
+            .find_group(&GroupId::from(alix_bo_dm.group_id.as_slice()))??
             .last_message_ns?;
 
         let key = vec![7; 32];
@@ -310,7 +313,7 @@ mod tests {
 
         let timestamp2 = alix2
             .db()
-            .find_group(&alix_bo_dm.group_id)??
+            .find_group(&GroupId::from(alix_bo_dm.group_id.as_slice()))??
             .last_message_ns?;
         assert_eq!(timestamp, timestamp2);
 
@@ -503,7 +506,7 @@ mod tests {
             assert_eq!(old_msg.group_id, msg.group_id);
         }
 
-        let alix2_group = alix2.group(&old_group.id)?;
+        let alix2_group = alix2.group(old_group.id.as_ref())?;
         // Loading all the groups works fine
         let _groups = alix2.find_groups(GroupQueryArgs::default())?;
         // Can fetch the group name no problem
@@ -511,13 +514,13 @@ mod tests {
         assert!(!alix2_group.is_active()?);
 
         // Add the new inbox to the groups
-        alix.group(&old_group.id)?
+        alix.group(old_group.id.as_ref())?
             .add_members(&[alix2.inbox_id()])
             .await?;
         alix2.sync_welcomes().await?;
 
         // The group restores to being fully functional
-        let alix2_group = alix2.group(&old_group.id)?;
+        let alix2_group = alix2.group(old_group.id.as_ref())?;
         assert!(alix2_group.is_active()?);
 
         // The old messages should be stitched in

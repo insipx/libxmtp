@@ -54,7 +54,9 @@ use openmls::{
     },
     group::{GroupContext, MlsGroupCreateConfig},
     messages::proposals::ProposalType,
-    prelude::{Capabilities, GroupId, MlsGroup as OpenMlsGroup, WireFormatPolicy},
+    prelude::{
+        Capabilities, GroupId as OpenMlsGroupId, MlsGroup as OpenMlsGroup, WireFormatPolicy,
+    },
 };
 use prost::Message;
 use std::collections::HashMap;
@@ -108,7 +110,7 @@ use xmtp_mls_common::{
 };
 use xmtp_proto::xmtp::mls::message_contents::content_types::{DeleteMessage, LeaveRequest};
 use xmtp_proto::{
-    types::Cursor,
+    types::{Cursor, GroupId},
     xmtp::mls::message_contents::{
         EncodedContent, OneshotMessage, PlaintextEnvelope,
         content_types::ReactionV2,
@@ -316,7 +318,7 @@ where
         group_id: &[u8],
     ) -> Result<(Self, StoredGroup), StorageError> {
         let conn = context.db();
-        if let Some(group) = conn.find_group(group_id)? {
+        if let Some(group) = conn.find_group(&GroupId::from(group_id))? {
             Ok((
                 Self::new_from_arc(
                     context,
@@ -368,7 +370,7 @@ where
         // Acquire the lock synchronously using blocking_lock
         let _lock = self.mls_commit_lock.get_lock_sync(group_id.clone());
         // Load the MLS group
-        let mls_group = OpenMlsGroup::load(storage, &GroupId::from_slice(&self.group_id))
+        let mls_group = OpenMlsGroup::load(storage, &OpenMlsGroupId::from_slice(&self.group_id))
             .map_err(|_| NotFound::MlsGroup)?
             .ok_or(NotFound::MlsGroup)?;
 
@@ -393,10 +395,10 @@ where
         let _lock = self.mls_commit_lock.get_lock_async(group_id.clone()).await;
 
         // Load the MLS group
-        let mls_group = OpenMlsGroup::load(mls_storage, &GroupId::from_slice(&self.group_id))?
-            .ok_or(StorageError::from(NotFound::GroupById(
-                self.group_id.to_vec(),
-            )))?;
+        let mls_group =
+            OpenMlsGroup::load(mls_storage, &OpenMlsGroupId::from_slice(&self.group_id))?.ok_or(
+                StorageError::from(NotFound::GroupById(self.group_id.to_vec())),
+            )?;
 
         // Perform the operation with the MLS group
         operation(mls_group).await
@@ -599,7 +601,7 @@ where
         )?;
         let new_group = Self::new_from_arc(
             context.clone(),
-            stored_group.id,
+            stored_group.id.to_vec(),
             stored_group.dm_id,
             conversation_type,
             stored_group.created_at_ns,
@@ -650,7 +652,7 @@ where
                 &provider,
                 context.identity(),
                 &group_config,
-                GroupId::from_slice(existing_group_id),
+                GroupId::from(existing_group_id),
             )?
         } else {
             OpenMlsGroup::from_creation_logged(&provider, context.identity(), &group_config)?
@@ -713,7 +715,7 @@ where
                 &provider,
                 context.identity(),
                 &group_config,
-                GroupId::from_slice(group_id),
+                GroupId::from(group_id),
             )?
         } else {
             OpenMlsGroup::from_creation_logged(&provider, context.identity(), &group_config)?
@@ -1111,14 +1113,14 @@ where
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessage>, GroupError> {
         let conn = self.context.db();
-        let messages = conn.get_group_messages(&self.group_id, args)?;
+        let messages = conn.get_group_messages(&GroupId::from(self.group_id.as_slice()), args)?;
         Ok(messages)
     }
 
     /// Count the number of stored messages matching the given criteria
     pub fn count_messages(&self, args: &MsgQueryArgs) -> Result<i64, GroupError> {
         let conn = self.context.db();
-        let count = conn.count_group_messages(&self.group_id, args)?;
+        let count = conn.count_group_messages(&GroupId::from(self.group_id.as_slice()), args)?;
         Ok(count)
     }
 
@@ -1129,7 +1131,8 @@ where
         args: &MsgQueryArgs,
     ) -> Result<Vec<StoredGroupMessageWithReactions>, GroupError> {
         let conn = self.context.db();
-        let messages = conn.get_group_messages_with_reactions(&self.group_id, args)?;
+        let messages =
+            conn.get_group_messages_with_reactions(&GroupId::from(self.group_id.as_slice()), args)?;
         Ok(messages)
     }
 
@@ -1139,7 +1142,7 @@ where
         args: &MsgQueryArgs,
     ) -> Result<Vec<crate::messages::decoded_message::DecodedMessage>, EnrichMessageError> {
         let conn = self.context.db();
-        let messages = conn.get_group_messages(&self.group_id, args)?;
+        let messages = conn.get_group_messages(&GroupId::from(self.group_id.as_slice()), args)?;
         let enriched =
             crate::messages::enrichment::enrich_messages(conn, &self.group_id, messages)?;
         Ok(enriched)
@@ -1155,7 +1158,7 @@ where
     /// Load the group reference stored in the local database
     pub fn load(&self) -> Result<StoredGroup, StorageError> {
         let conn = self.context.db();
-        if let Some(group) = conn.find_group(&self.group_id)? {
+        if let Some(group) = conn.find_group(&GroupId::from(self.group_id.as_slice()))? {
             Ok(group)
         } else {
             tracing::error!("group {} does not exist", hex::encode(&self.group_id));
@@ -1477,7 +1480,10 @@ where
             // Clear the pending leave request status
             self.context
                 .db()
-                .set_group_has_pending_leave_request_status(&self.group_id, Some(false))?;
+                .set_group_has_pending_leave_request_status(
+                    &GroupId::from(self.group_id.as_slice()),
+                    Some(false),
+                )?;
             return Ok(());
         }
 
@@ -1504,9 +1510,10 @@ where
             );
 
             // Remove all users who are no longer in the group from pending list
-            self.context
-                .db()
-                .delete_pending_remove_users(&self.group_id, removed_members)?;
+            self.context.db().delete_pending_remove_users(
+                &GroupId::from(self.group_id.as_slice()),
+                removed_members,
+            )?;
         }
 
         // After cleanup, check if there are any pending removals left
@@ -1515,7 +1522,10 @@ where
             // Clear the pending leave request status if no pending removals remain
             self.context
                 .db()
-                .set_group_has_pending_leave_request_status(&self.group_id, Some(false))?;
+                .set_group_has_pending_leave_request_status(
+                    &GroupId::from(self.group_id.as_slice()),
+                    Some(false),
+                )?;
         }
 
         tracing::info!(
@@ -1936,13 +1946,20 @@ where
 
     /// If group is not paused, will return None, otherwise will return the version that the group is paused for
     pub fn paused_for_version(&self) -> Result<Option<String>, GroupError> {
-        let paused_for_version = self.context.db().get_group_paused_version(&self.group_id)?;
+        let paused_for_version = self
+            .context
+            .db()
+            .get_group_paused_version(&GroupId::from(self.group_id.as_slice()))?;
         Ok(paused_for_version)
     }
 
     #[tracing::instrument(skip_all, level = "trace")]
     async fn ensure_not_paused(&self) -> Result<(), GroupError> {
-        if let Some(min_version) = self.context.db().get_group_paused_version(&self.group_id)? {
+        if let Some(min_version) = self
+            .context
+            .db()
+            .get_group_paused_version(&GroupId::from(self.group_id.as_slice()))?
+        {
             Err(GroupError::GroupPausedUntilUpdate(min_version))
         } else {
             Ok(())
@@ -1984,7 +2001,7 @@ where
     pub fn pending_remove_list(&self) -> Result<Vec<String>, GroupError> {
         self.context
             .db()
-            .get_pending_remove_users(&self.group_id)
+            .get_pending_remove_users(&GroupId::from(self.group_id.as_slice()))
             .map_err(Into::into)
     }
 
@@ -1992,7 +2009,7 @@ where
     pub fn is_in_pending_remove(&self, inbox_id: &str) -> Result<bool, GroupError> {
         self.context
             .db()
-            .get_user_pending_remove_status(&self.group_id, inbox_id)
+            .get_user_pending_remove_status(&GroupId::from(self.group_id.as_slice()), inbox_id)
             .map_err(Into::into)
     }
 
@@ -2032,7 +2049,10 @@ where
 
     /// Retrieves the conversation type of the group from the group's metadata extension.
     pub async fn conversation_type(&self) -> Result<ConversationType, GroupError> {
-        let conversation_type = self.context.db().get_conversation_type(&self.group_id)?;
+        let conversation_type = self
+            .context
+            .db()
+            .get_conversation_type(&GroupId::from(self.group_id.as_slice()))?;
         Ok(conversation_type)
     }
 
@@ -2070,7 +2090,7 @@ where
     pub fn added_by_inbox_id(&self) -> Result<String, GroupError> {
         let conn = self.context.db();
         let group = conn
-            .find_group(&self.group_id)?
+            .find_group(&GroupId::from(self.group_id.as_slice()))?
             .ok_or_else(|| NotFound::GroupById(self.group_id.clone()))?;
         Ok(group.added_by_inbox_id)
     }
@@ -2160,12 +2180,15 @@ where
     }
 
     pub async fn local_commit_log(&self) -> Result<Vec<LocalCommitLog>, GroupError> {
-        Ok(self.context.db().get_group_logs(&self.group_id)?)
+        Ok(self
+            .context
+            .db()
+            .get_group_logs(&GroupId::from(self.group_id.as_slice()))?)
     }
 
     pub async fn remote_commit_log(&self) -> Result<Vec<RemoteCommitLog>, GroupError> {
         Ok(self.context.db().get_remote_commit_log_after_cursor(
-            &self.group_id,
+            &GroupId::from(self.group_id.as_slice()),
             0,
             RemoteCommitLogOrder::AscendingByRowid,
         )?)
@@ -2178,7 +2201,7 @@ where
         let remote_commit_log = self.remote_commit_log().await?;
         let db = self.context.db();
 
-        let stored_group = match db.find_group(&self.group_id)? {
+        let stored_group = match db.find_group(&GroupId::from(self.group_id.as_slice()))? {
             Some(group) => group,
             None => {
                 return Err(GroupError::NotFound(NotFound::GroupById(
@@ -2216,7 +2239,11 @@ where
     #[tracing::instrument(skip_all, level = "trace")]
     pub fn is_active(&self) -> Result<bool, GroupError> {
         // Restored groups that are not yet added are inactive
-        let Some(stored_group) = self.context.db().find_group(&self.group_id)? else {
+        let Some(stored_group) = self
+            .context
+            .db()
+            .find_group(&GroupId::from(self.group_id.as_slice()))?
+        else {
             return Err(GroupError::NotFound(NotFound::GroupById(
                 self.group_id.clone(),
             )));
@@ -2239,7 +2266,7 @@ where
         let stored_group = self
             .context
             .db()
-            .find_group(&self.group_id)?
+            .find_group(&GroupId::from(self.group_id.as_slice()))?
             .ok_or_else(|| GroupError::NotFound(NotFound::GroupById(self.group_id.clone())))?;
         Ok(stored_group.membership_state)
     }
@@ -2292,7 +2319,8 @@ where
     /// `None` if the group or settings are missing, or `Err(ClientError)` on a database error.
     pub fn disappearing_settings(&self) -> Result<Option<MessageDisappearingSettings>, GroupError> {
         let conn = self.context.db();
-        let stored_group: Option<StoredGroup> = conn.fetch(&self.group_id)?;
+        let stored_group: Option<StoredGroup> =
+            conn.fetch(&GroupId::from(self.group_id.as_slice()))?;
 
         let settings = stored_group.and_then(|group| {
             let from_ns = group.message_disappear_from_ns?;
@@ -2306,14 +2334,17 @@ where
 
     /// Find all the duplicate dms for this group
     pub fn find_duplicate_dms(&self) -> Result<Vec<MlsGroup<Context>>, ClientError> {
-        let duplicates = self.context.db().other_dms(&self.group_id)?;
+        let duplicates = self
+            .context
+            .db()
+            .other_dms(&GroupId::from(self.group_id.as_slice()))?;
 
         let mls_groups = duplicates
             .into_iter()
             .map(|g| {
                 MlsGroup::new(
                     self.context.clone(),
-                    g.id,
+                    g.id.to_vec(),
                     g.dm_id,
                     g.conversation_type,
                     g.created_at_ns,

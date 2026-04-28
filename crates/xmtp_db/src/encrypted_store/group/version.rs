@@ -2,33 +2,34 @@ use crate::ConnectionExt;
 
 use super::*;
 
+use xmtp_proto::types::GroupId;
 pub trait QueryGroupVersion {
-    fn set_group_paused(&self, group_id: &[u8], min_version: &str) -> Result<(), StorageError>;
+    fn set_group_paused(&self, group_id: &GroupId, min_version: &str) -> Result<(), StorageError>;
 
-    fn unpause_group(&self, group_id: &[u8]) -> Result<(), StorageError>;
+    fn unpause_group(&self, group_id: &GroupId) -> Result<(), StorageError>;
 
-    fn get_group_paused_version(&self, group_id: &[u8]) -> Result<Option<String>, StorageError>;
+    fn get_group_paused_version(&self, group_id: &GroupId) -> Result<Option<String>, StorageError>;
 }
 
 impl<T> QueryGroupVersion for &T
 where
     T: QueryGroupVersion,
 {
-    fn set_group_paused(&self, group_id: &[u8], min_version: &str) -> Result<(), StorageError> {
+    fn set_group_paused(&self, group_id: &GroupId, min_version: &str) -> Result<(), StorageError> {
         (**self).set_group_paused(group_id, min_version)
     }
 
-    fn unpause_group(&self, group_id: &[u8]) -> Result<(), StorageError> {
+    fn unpause_group(&self, group_id: &GroupId) -> Result<(), StorageError> {
         (**self).unpause_group(group_id)
     }
 
-    fn get_group_paused_version(&self, group_id: &[u8]) -> Result<Option<String>, StorageError> {
+    fn get_group_paused_version(&self, group_id: &GroupId) -> Result<Option<String>, StorageError> {
         (**self).get_group_paused_version(group_id)
     }
 }
 
 impl<C: ConnectionExt> QueryGroupVersion for DbConnection<C> {
-    fn set_group_paused(&self, group_id: &[u8], min_version: &str) -> Result<(), StorageError> {
+    fn set_group_paused(&self, group_id: &GroupId, min_version: &str) -> Result<(), StorageError> {
         use crate::schema::groups::dsl;
 
         self.raw_query(|conn| {
@@ -40,7 +41,7 @@ impl<C: ConnectionExt> QueryGroupVersion for DbConnection<C> {
         Ok(())
     }
 
-    fn unpause_group(&self, group_id: &[u8]) -> Result<(), StorageError> {
+    fn unpause_group(&self, group_id: &GroupId) -> Result<(), StorageError> {
         use crate::schema::groups::dsl;
 
         self.raw_query(|conn| {
@@ -52,7 +53,7 @@ impl<C: ConnectionExt> QueryGroupVersion for DbConnection<C> {
         Ok(())
     }
 
-    fn get_group_paused_version(&self, group_id: &[u8]) -> Result<Option<String>, StorageError> {
+    fn get_group_paused_version(&self, group_id: &GroupId) -> Result<Option<String>, StorageError> {
         use crate::schema::groups::dsl;
 
         let paused_version = self.raw_query(|conn| {

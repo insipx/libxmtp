@@ -5,7 +5,6 @@ use crate::identity::Identity;
 use openmls::group::{MlsGroup, MlsGroupCreateConfig, StagedCommit};
 use openmls::prelude::CredentialWithKey;
 use openmls::prelude::GroupEpoch;
-use openmls::prelude::GroupId;
 use openmls::prelude::StagedWelcome;
 use xmtp_db::MlsProviderExt;
 use xmtp_db::{
@@ -15,6 +14,7 @@ use xmtp_db::{
     remote_commit_log::CommitResult,
 };
 
+use xmtp_proto::types::GroupId;
 /// This trait wraps openmls groups to include commit logs for any mutations to encryption state.
 /// This helps with fork detection.
 pub trait CommitLogStorer: std::marker::Sized {
@@ -104,7 +104,7 @@ impl CommitLogStorer for MlsGroup {
             provider,
             &identity.installation_keys,
             group_config,
-            group_id,
+            group_id.to_openmls(),
             CredentialWithKey {
                 credential: identity.credential(),
                 signature_key: identity.installation_keys.public_slice().into(),
@@ -206,7 +206,8 @@ impl CommitLogStorer for MlsGroup {
         let conn = provider.key_store().db();
         let mut maybe_recently_welcomed = true;
         // Latest log may not exist if a client upgraded from a version without local commit logs
-        if let Some(latest_log) = conn.get_latest_log_for_group(&group_id)?
+        if let Some(latest_log) =
+            conn.get_latest_log_for_group(&GroupId::from(group_id.as_slice()))?
             && latest_log.commit_type != Some(CommitType::Welcome.to_string())
         {
             maybe_recently_welcomed = false;

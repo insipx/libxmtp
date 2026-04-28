@@ -49,6 +49,7 @@ use xmtp_proto::xmtp::mls::message_contents::{
     OneshotMessage, ReaddRequest, oneshot_message::MessageType,
 };
 
+use xmtp_proto::types::GroupId;
 /// Interval at which the CommitLogWorker runs to publish commit log entries.
 pub const DEFAULT_INTERVAL_DURATION: Duration = Duration::from_secs(60 * 5); // 5 minutes
 
@@ -334,7 +335,7 @@ where
                     self.sign_group_logs(conversation, &plaintext_commit_log_entries)?;
                 all_entries.extend(signed_entries);
                 conversation_cursor_info.push(ConversationCursorInfo {
-                    conversation_id: conversation.id.clone(),
+                    conversation_id: conversation.id.to_vec(),
                     num_entries_published: plaintext_commit_log_entries.len(),
                     last_entry_published_sequence_id: plaintext_commit_log_entries
                         .last()
@@ -372,7 +373,7 @@ where
             let public_key = xmtp_cryptography::signature::to_public_key(&private_key)?.to_vec();
 
             signed_entries.push(PublishCommitLogRequest {
-                group_id: conversation.id.clone(),
+                group_id: conversation.id.to_vec(),
                 serialized_commit_log_entry,
                 signature: Some(RecoverableEd25519Signature {
                     bytes: signature,
@@ -390,7 +391,7 @@ where
         let conversation_id_to_public_key: HashMap<Vec<u8>, Option<Vec<u8>>> = conn
             .get_conversation_ids_for_remote_log_download()?
             .into_iter()
-            .map(|c| (c.id, c.commit_log_public_key))
+            .map(|c| (c.id.to_vec(), c.commit_log_public_key))
             .collect();
 
         // Step 1 is to collect a list of remote log cursors for all conversations and convert them into query log requests
@@ -466,7 +467,8 @@ where
         // 2. The latest applied epoch number
         // 3. The latest stored sequence id
         if let Some(consensus_public_key) = consensus_public_key {
-            let mut latest_saved_remote_log = conn.get_latest_remote_log_for_group(&group_id)?;
+            let mut latest_saved_remote_log =
+                conn.get_latest_remote_log_for_group(&GroupId::from(group_id.as_slice()))?;
             for commit_log_entry in &commit_log_response.commit_log_entries {
                 let log_entry = match PlaintextCommitLogEntry::decode(
                     commit_log_entry.serialized_commit_log_entry.as_slice(),
@@ -597,7 +599,10 @@ where
                 let db = key_store.db();
                 let is_forked = self.check_conversation_fork_state(&db, &conversation_id)?;
                 // Persist the fork status to the database
-                db.set_group_commit_log_forked_status(&conversation_id, is_forked)?;
+                db.set_group_commit_log_forked_status(
+                    &GroupId::from(conversation_id.as_slice()),
+                    is_forked,
+                )?;
                 Ok::<(), CommitLogError>(())
             })?;
             tokio::task::yield_now().await;
@@ -628,9 +633,10 @@ where
     ) -> Result<(), CommitLogError> {
         let conn = self.context.db();
         let group_id = group_info.group_id;
+        let group_id_typed = GroupId::from(group_id.as_slice());
 
         // Check if a readd request has already been sent for this group
-        if conn.is_awaiting_readd(&group_id, self.context.installation_id().as_slice())? {
+        if conn.is_awaiting_readd(&group_id_typed, self.context.installation_id().as_slice())? {
             tracing::debug!(
                 group_id = hex::encode(&group_id),
                 "Skipping readd request for group because it has already been requested"
@@ -666,7 +672,7 @@ where
 
         // Mark readd as requested
         conn.update_requested_at_sequence_id(
-            &group_id,
+            &group_id_typed,
             self.context.installation_id().as_slice(),
             latest_commit_sequence_id as i64,
         )?;
@@ -775,7 +781,7 @@ where
                             e
                         );
                         conn.delete_other_readd_statuses(
-                            &group.group_id,
+                            &GroupId::from(group.group_id.as_slice()),
                             self.context.installation_id().as_slice(),
                         )?;
                     }
@@ -831,7 +837,7 @@ where
         }
 
         let readd_statuses = conn.get_readds_awaiting_response(
-            &mls_group.group_id,
+            &GroupId::from(mls_group.group_id.as_slice()),
             self.context.installation_id().as_slice(),
         )?;
         let mut unverified = readd_statuses
@@ -857,7 +863,7 @@ where
             unverified.len(),
             verified.len()
         );
-        conn.delete_readd_statuses(&mls_group.group_id, unverified)?;
+        conn.delete_readd_statuses(&GroupId::from(mls_group.group_id.as_slice()), unverified)?;
 
         Ok(verified)
     }
@@ -880,20 +886,21 @@ where
         )?;
 
         // Get local and remote commit logs
+        let conversation_id_typed = GroupId::from(conversation_id);
         let local_logs = conn.get_local_commit_log_after_cursor(
-            conversation_id,
+            &conversation_id_typed,
             fork_check_local_cursor.sequence_id as i64,
             LocalCommitLogOrder::DescendingByRowid,
         )?;
         let remote_logs = conn.get_remote_commit_log_after_cursor(
-            conversation_id,
+            &conversation_id_typed,
             fork_check_remote_cursor.sequence_id as i64,
             RemoteCommitLogOrder::DescendingByRowid,
         )?;
 
         // If there are no new commits to check, preserve the existing fork status
         if local_logs.is_empty() {
-            return Ok(conn.get_group_commit_log_forked_status(conversation_id)?);
+            return Ok(conn.get_group_commit_log_forked_status(&conversation_id_typed)?);
         }
 
         let mut is_remote_log_up_to_date = true;
@@ -995,7 +1002,7 @@ where
         let mut results = HashMap::new();
         for group in all_groups {
             let fork_status = conn.get_group_commit_log_forked_status(&group.id)?;
-            results.insert(group.id, fork_status);
+            results.insert(group.id.to_vec(), fork_status);
         }
 
         Ok(results)

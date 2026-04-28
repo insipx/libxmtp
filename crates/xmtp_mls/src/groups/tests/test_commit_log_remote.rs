@@ -27,6 +27,7 @@ use xmtp_proto::xmtp::identity::associations::RecoverableEd25519Signature;
 use xmtp_proto::xmtp::mls::message_contents::CommitLogEntry;
 use xmtp_proto::xmtp::mls::message_contents::PlaintextCommitLogEntry;
 
+use xmtp_proto::types::GroupId;
 // Helper functions for tracking commit types
 fn get_commit_types_as_strings(logs: &[LocalCommitLog]) -> Vec<String> {
     logs.iter()
@@ -294,7 +295,7 @@ async fn test_publish_commit_log_to_remote() {
     let commit_log_entries = alix
         .context
         .db()
-        .get_group_logs(&alix_group.group_id)
+        .get_group_logs(&GroupId::from(alix_group.group_id.as_slice()))
         .unwrap();
     assert_eq!(commit_log_entries.len(), 2);
 
@@ -993,11 +994,11 @@ async fn test_all_users_use_same_signing_key_for_publishing() {
     // Find the DM conversation key for each party
     let alix_dm_key = alix_conversation_keys
         .iter()
-        .find(|k| k.id == alix_dm.group_id)
+        .find(|k| k.id.as_slice() == alix_dm.group_id.as_slice())
         .expect("Alix should have DM key");
     let bo_dm_key = bo_conversation_keys
         .iter()
-        .find(|k| k.id == bo_dm.group_id)
+        .find(|k| k.id.as_slice() == bo_dm.group_id.as_slice())
         .expect("Bo should have DM key");
 
     // Get the signing keys that would be used for publishing
@@ -1581,7 +1582,11 @@ async fn test_legacy_group_signing_key_discovery_via_remote_commit_log() {
     println!("✓ All participants now have the new signing key in mutable metadata");
 
     // Additional verification: the consensus key should be set in the database
-    let stored_group = alix.context.db().find_group(&group.group_id)?.unwrap();
+    let stored_group = alix
+        .context
+        .db()
+        .find_group(&GroupId::from(group.group_id.as_slice()))?
+        .unwrap();
     assert_eq!(
         stored_group.commit_log_public_key,
         Some(new_public_key.clone())

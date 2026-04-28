@@ -6,7 +6,7 @@ use crate::group::QueryGroup;
 use crate::identity_update::StoredIdentityUpdate;
 use crate::prelude::QueryIdentityUpdates;
 use crate::{prelude::QueryRefreshState, refresh_state::EntityKind};
-use xmtp_proto::types::{Cursor, OriginatorId, SequenceId};
+use xmtp_proto::types::{Cursor, GroupId, OriginatorId, SequenceId};
 
 use super::*;
 
@@ -147,7 +147,11 @@ async fn up_groups() {
 
     finish_migrations(db.conn());
 
-    let group = db.db().find_group(&[1, 2, 3]).unwrap().unwrap();
+    let group = db
+        .db()
+        .find_group(&GroupId::from(&[1u8, 2, 3][..]))
+        .unwrap()
+        .unwrap();
     assert_eq!(group.sequence_id, Some(100));
     assert_eq!(
         group.originator_id,

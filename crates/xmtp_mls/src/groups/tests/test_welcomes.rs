@@ -20,6 +20,7 @@ use xmtp_db::prelude::QueryRefreshState;
 use xmtp_db::refresh_state::EntityKind;
 use xmtp_mls_common::group::GroupMetadataOptions;
 
+use xmtp_proto::types::GroupId;
 #[xmtp_common::test(unwrap_try = true)]
 async fn test_welcome_cursor() {
     // Welcomes now come with a cursor so that clients no longer pull down
@@ -46,8 +47,9 @@ async fn test_welcome_cursor() {
 
 #[track_caller]
 fn assert_cursors(db: &impl DbQuery, db2: &impl DbQuery, group_id: &[u8]) {
+    let group_id_typed = GroupId::from(group_id);
     let msg = db
-        .get_group_messages(group_id, &Default::default())
+        .get_group_messages(&group_id_typed, &Default::default())
         .unwrap();
     let msg = msg.last().unwrap();
     let cursor = db
@@ -65,7 +67,7 @@ fn assert_cursors(db: &impl DbQuery, db2: &impl DbQuery, group_id: &[u8]) {
     );
 
     let other_msg = db2
-        .get_group_messages(group_id, &Default::default())
+        .get_group_messages(&group_id_typed, &Default::default())
         .unwrap();
     let other_msg = other_msg.last().unwrap();
     assert_eq!(
