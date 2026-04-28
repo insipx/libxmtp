@@ -167,11 +167,15 @@ jobs:
             echo "No changes to commit"
           fi
 
+      # TODO(nightly-soft-launch): remove this guard once production nightly is verified.
       - name: Tag release
+        if: github.repository == 'xmtp/libxmtp'
         env:
           VERSION: ${{ needs.build-and-package.outputs.version }}
         run: xmtp-release tag-release --sdk ios --version "$VERSION"
+      # TODO(nightly-soft-launch): remove this guard once production nightly is verified.
       - name: Create release and upload bundle
+        if: github.repository == 'xmtp/libxmtp'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.build-and-package.outputs.version }}
@@ -199,7 +203,7 @@ jobs:
               "XMTP-${VERSION}.zip"
           fi
       - name: Publish to CocoaPods
-        if: inputs.release-type != 'nightly'
+        if: inputs.release-type != 'nightly' && github.repository == 'xmtp/libxmtp'
         env:
           COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
           VERSION: ${{ needs.build-and-package.outputs.version }}

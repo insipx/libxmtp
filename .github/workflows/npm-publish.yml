@@ -81,9 +81,13 @@ jobs:
       - name: Update npm to latest
         run: npm install -g npm@latest
 
+      # TODO(nightly-soft-launch): remove this guard once production nightly is verified.
       - name: Publish to NPM
+        if: github.repository == 'xmtp/libxmtp'
         working-directory: ${{ inputs.package-dir }}
         run: npm publish --provenance ${{ inputs.ignore-scripts && '--ignore-scripts' || '' }} --tag ${{ steps.npm-tag.outputs.tag }}
 
+      # TODO(nightly-soft-launch): remove this guard once production nightly is verified.
       - name: Tag release
+        if: github.repository == 'xmtp/libxmtp'
         run: xmtp-release tag-release --sdk "${{ inputs.sdk }}" --version "${{ inputs.version }}" --ignore-if-exists
